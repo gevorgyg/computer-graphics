@@ -3,13 +3,17 @@
 
 #include "math.h"
 
+typedef struct Triangle {
+  Vec3i v[3];
+}
 typedef struct Model {
   // Model geometry data
   int vertexCount;
   Vec3 *vertices;
+  Vec3* textures;
   Vec3 *normals;
-  // TODO(student): Add more vertex attributes ... 
-    
+  Triangle* triangles;
+  
   // Model transformation data
   Vec3 position;
   bool hidden;
@@ -138,6 +142,36 @@ static Vec3 ParseNextVec3(const char *str, int *start, int len) {
   return v;
 }
 
+static Vec3i ParseNextTriplet(const char *str, int *start, int len) {
+  Vec3i t = {0, 0, 0};
+  int i = *start;
+  t.x = ParseNextInt(str, &i, len);       
+
+  if (i < len && str[i] == '/') {
+    i++;                                  
+    if (i < len && str[i] != '/') {
+      t.y = ParseNextInt(str, &i, len);   
+    }
+    if (i < len && str[i] == '/') {
+      i++;                                
+      t.z = ParseNextInt(str, &i, len);   
+    }
+  }
+
+  *start = i;
+  return t;
+}
+
+static Triangle ParseNextTriangle(const char *str, int *start, int len) {
+  Triangle tri;
+  int i = *start;
+  for (int k = 0; k < 3; k++) {
+    tri.v[k] = ParseNextTriplet(str, &i, len);
+  }
+  *start = i;
+  return tri;
+}
+
 static 
 // Helper functions end
 
@@ -168,6 +202,10 @@ Model LoadModelFromObjFile(const char *filename) {
         i++;
         Vec3 v = ParseNextVec3(data, &i, dataSize);
         arrput(model.normals, v);
+      } else if (data[i] == 't') {
+        i++;
+        Vec3 v = ParseNextVec3(data, &i, dataSize);
+        arrput(model.textures, v);
       } else {
         TraceLog(LOG_WARNING, "%s:%d: OBJ Loader: Unhandled character '%c' when parsing a vertex, skipping the rest of the line", filename, lineIndex, data[i]);
       }
@@ -175,8 +213,8 @@ Model LoadModelFromObjFile(const char *filename) {
             
     case 'f': {
       ++i;
-      
-      // TODO(student): No need for arbitrary polygons, only triangles are fine
+      Triangle t = ParseNextTriangle(data, &i, dataSize);
+      arrput(model.triangles, t);
     } break;
             
     default: {
@@ -197,6 +235,9 @@ Model LoadModelFromObjFile(const char *filename) {
 
 void FreeModel(Model *model) {
   arrfree(model->vertices);
+  arrfree(model->textures);
+  arrfree(model->normals);
+  arrfree(model->triangles);
 }
 
 #endif // MODEL_IMPLEMENTED
