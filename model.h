@@ -4,7 +4,9 @@
 #include "math.h"
 
 typedef struct Triangle {
-  Vec3i v[3];
+  int vertices[3];
+  int textures[3];
+  int normals[3];
 } Triangle;
 
 
@@ -165,10 +167,14 @@ static Vec3i ParseNextTriplet(const char *str, int *start, int len) {
 }
 
 static Triangle ParseNextTriangle(const char *str, int *start, int len) {
-  Triangle tri;
+  Triangle tri = {};
   int i = *start;
+  Vec3i t;
   for (int k = 0; k < 3; k++) {
-    tri.v[k] = ParseNextTriplet(str, &i, len);
+    t = ParseNextTriplet(str, &i, len);
+    tri.vertices[k] = t.x;
+    tri.textures[k] = t.y;
+    tri.textures[k] = t.z;
   }
   *start = i;
   return tri;
