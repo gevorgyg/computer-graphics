@@ -5,7 +5,9 @@
 
 typedef struct Triangle {
   Vec3i v[3];
-} Triangle; 
+} Triangle;
+
+
 typedef struct Model {
   // Model geometry data
   int vertexCount;
@@ -26,7 +28,7 @@ typedef struct Model {
   unsigned int gpuVertexArrayId;
 } Model;
 
-Model LoadModelFromFile(const char *filename);
+Model LoadModelFromObjFile(const char *filename);
 void FreeModel(Model *model);
 
 #endif // MODEL_HEADER
@@ -172,7 +174,6 @@ static Triangle ParseNextTriangle(const char *str, int *start, int len) {
   return tri;
 }
 
-static 
 // Helper functions end
 
 
@@ -227,7 +228,7 @@ Model LoadModelFromObjFile(const char *filename) {
         
     lineIndex += 1;
   }
-    
+  model.vertexCount += arrlen(model.vertices);
   UnloadFileData((unsigned char*)data);
     
   return model;
