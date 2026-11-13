@@ -5,7 +5,7 @@
 
 typedef struct Triangle {
   Vec3i v[3];
-}
+} Triangle; 
 typedef struct Model {
   // Model geometry data
   int vertexCount;
