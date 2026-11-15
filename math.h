@@ -2,6 +2,7 @@
 #define MATH_HEADER
 
 #define EPSILON 1e-8f
+#define PI 3.14159265F
 #define MIN(a, b) (((a) > (b)) ? (b) : (a))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define ABS(a) (((a) >= 0) ? (a) : -(a))
@@ -177,11 +178,11 @@ typedef union Vec4 {
 
 static Vec2 V2Neg(Vec2 v) { return (Vec2){-v.x, -v.y}; }
 
-static Vec2 V2Add(Vec2 v1, Vec2 v2) { return (Vec2){0.f, 0.f}; } // TODO(student)
+static Vec2 V2Add(Vec2 v1, Vec2 v2) { return (Vec2){v1.x + v2.x, v1.y + v2.y}; }
 static Vec2 V2Sub(Vec2 v1, Vec2 v2) { return (Vec2){v1.x - v2.x, v1.y - v2.y}; }
 
 static Vec2 V2MulS(Vec2 v, float s) { return (Vec2){v.x*s, v.y*s}; }
-static Vec2 V2DivS(Vec2 v, float s) { return (Vec2){0.f, 0.f}; } // TODO(student)
+static Vec2 V2DivS(Vec2 v, float s) { return (Vec2){v.x/s, v.y/s}; }
 
 static Vec2 V2Mul(Vec2 v1, Vec2 v2) { return (Vec2){v1.x*v2.x, v1.y*v2.y}; }
 static Vec2 V2Div(Vec2 v1, Vec2 v2) { return (Vec2){v1.x/v2.x, v1.y/v2.y}; }
@@ -193,35 +194,31 @@ static Vec2 V2Lerp(Vec2 a, float t, Vec2 b) {
 }
 
 static float V2Dot(Vec2 v1, Vec2 v2) {
-    float result;
-    // TODO(student)
-    return result;
+    return v1.x * v2.x + v1.y * v2.y;
 }
 
 static float V2Length(Vec2 v) {
-    float result;
-    // TODO(student)
-    return result;
+    return (float)sqrt(V2Dot(v, v));
 }
 
 static Vec2 V2Normalize(Vec2 v) {
-    Vec2 result = {0.f, 0.f};
-    // TODO(student)
-    return result;
+    float length = V2Length(v);
+    if(length < EPSILON) return v;
+    return V2DivS(v, length);
 }
 
 static Vec3 V3Neg(Vec3 v) { return (Vec3){-v.x, -v.y, -v.z}; }
 
-static Vec3 V3Add(Vec3 v1, Vec3 v2) { return (Vec3){0.f, 0.f, 0.f}; } // TODO(student)
+static Vec3 V3Add(Vec3 v1, Vec3 v2) { return (Vec3){v1.x + v2.x, v1.y + v2.y, v1.z + v2.z}; }
 static Vec3 V3Sub(Vec3 v1, Vec3 v2) { return (Vec3){v1.x - v2.x, v1.y - v2.y, v1.z - v2.z}; }
 
-static Vec3 V3MulS(Vec3 v, float s) { return (Vec3){0.f, 0.f, 0.f}; } // TODO(student)
-static Vec3 V3DivS(Vec3 v, float s) { return (Vec3){0.f, 0.f, 0.f}; } // TODO(student)
+static Vec3 V3MulS(Vec3 v, float s) { return (Vec3){v.x*s, v.y*s, v.z*s}; }
+static Vec3 V3DivS(Vec3 v, float s) { return (Vec3){v.x/s, v.y/s, v.z/s}; }
 
-static Vec3 V3Mul(Vec3 v1, Vec3 v2) { return (Vec3){0.f, 0.f}; } // TODO(student)
-static Vec3 V3Div(Vec3 v1, Vec3 v2) { return (Vec3){0.f, 0.f}; } // TODO(student)
+static Vec3 V3Mul(Vec3 v1, Vec3 v2) { return (Vec3){v1.x*v2.x, v1.y*v2.y, v1.z*v2.z}; }
+static Vec3 V3Div(Vec3 v1, Vec3 v2) { return (Vec3){v1.x/v2.x, v1.y/v2.y, v1.z/v2.z}; }
 
-static bool V3Eq(Vec3 v1, Vec3 v2) { return false; } // TODO(student)
+static bool V3Eq(Vec3 v1, Vec3 v2) { return ((v1.x == v2.x) && (v1.y == v2.y) && (v1.z == v2.z)); }
 
 static Vec3 V3Lerp(Vec3 a, float t, Vec3 b) {
     return V3Add(V3MulS(a, (1.f - t)), V3MulS(b, t));
@@ -229,13 +226,13 @@ static Vec3 V3Lerp(Vec3 a, float t, Vec3 b) {
 
 static float V3Dot(Vec3 v1, Vec3 v2) {
     float result = 0.f;
-    // TODO(student)
+    result = v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
     return result;
 }
 
 static float V3LengthSquared(Vec3 v) {
     float result = 0.f;
-    // TODO(student)
+    result = V3Dot(v, v);
     return result;
 }
 
@@ -256,9 +253,7 @@ static Vec3 V3Normalize(Vec3 v) {
 }
 
 static Vec3 V3Cross(Vec3 v1, Vec3 v2) {
-    Vec3 result = {};
-    // TODO(student)
-    return result;
+    return (Vec3){v1.y*v2.z-v2.y*v1.z, v2.x*v1.z-v1.x*v2.z, v1.x*v2.y-v2.x*v1.y};
 }
 
 
@@ -354,8 +349,9 @@ static Mat2 M2Neg(Mat2 m) {
 }
 
 static Mat2 M2Add(Mat2 m1, Mat2 m2) {
-    Mat2 result = {};
-    // TODO(student)
+    Mat2 result;
+    result.r0 = V2Add(m1.r0, m2.r0);
+    result.r1 = V2Add(m1.r1, m2.r1);
     return result;
 }
 
@@ -380,26 +376,27 @@ static Mat2 M2DivS(Mat2 m, float s) {
     return result;
 }
 
+static Mat2 M2Transpose(Mat2 m) {
+    return (Mat2){
+        m.s00, m.s10,
+        m.s01, m.s11
+    };
+}
+
 static Vec2 M2MulV2(Mat2 m, Vec2 v) {
-    Vec2 result = {};
-    // TODO(student)
-    return result;
+    return (Vec2){V2Dot(m.r0, v), V2Dot(m.r1, v)};
 }
 
 static Mat2 M2MulM2(Mat2 m1, Mat2 m2) {
-    Mat2 result = {};
-    // TODO(student)
-    return result;
+    Mat2 m2t = M2Transpose(m2);
+    return (Mat2){
+        V2Dot(m1.r0, m2t.r0), V2Dot(m1.r0, m2t.r1),
+        V2Dot(m1.r1, m2t.r0), V2Dot(m1.r1, m2t.r1)
+    };
 }
 
 static bool M2Eq(Mat2 m1, Mat2 m2) {
     return V2Eq(m1.r0, m2.r0) && V2Eq(m1.r1, m2.r1);
-}
-
-static Mat2 M2Transpose(Mat2 m) {
-    Mat2 result = {};
-    // TODO(student)
-    return result;
 }
 
 static Mat2 M2Diag(float s00, float s11)  {
@@ -412,21 +409,23 @@ static Mat2 M2Diag(float s00, float s11)  {
 }
 
 static float M2Det(Mat2 m) {
-    float result = {};
-    // TODO(student)
-    return result;
+    return m.s00*m.s11-m.s01*m.s10;
 }
 
 static Mat2 M2Rotate(float theta) {
-    Mat2 result = {};
-    // TODO(student)
-    return result;
+    return (Mat2){
+        cos(theta), -sin(theta),
+        sin(theta), cos(theta)
+    };
 }
 
 static Mat2 M2Inverse(Mat2 m) {
-    Mat2 result = {};
-    // TODO(student)
-    return result;
+    float det = M2Det(m);
+    if(fabsf(det) < EPSILON) return (Mat2){0};
+    return M2DivS((Mat2){
+        m.s11, -m.s01,
+        -m.s10, m.s00
+    }, det);
 }
 
 static Mat3 M3Neg(Mat3 m) {
@@ -439,13 +438,17 @@ static Mat3 M3Neg(Mat3 m) {
 
 static Mat3 M3Add(Mat3 m1, Mat3 m2) {
     Mat3 result = {};
-    // TODO(student)
+    result.r0 = V3Add(m1.r0, m2.r0);
+    result.r1 = V3Add(m1.r1, m2.r1);
+    result.r2 = V3Add(m1.r2, m2.r2);
     return result;
 }
 
 static Mat3 M3Sub(Mat3 m1, Mat3 m2) {
     Mat3 result = {};
-    // TODO(student)
+    result.r0 = V3Sub(m1.r0, m2.r0);
+    result.r1 = V3Sub(m1.r1, m2.r1);
+    result.r2 = V3Sub(m1.r2, m2.r2);
     return result;
 }
 
@@ -465,26 +468,29 @@ static Mat3 M3DivS(Mat3 m, float s) {
     return result;
 }
 
+static Mat3 M3Transpose(Mat3 m) {
+    return (Mat3){
+        m.s00, m.s10, m.s20,
+        m.s01, m.s11, m.s21,
+        m.s02, m.s12, m.s22
+    };
+}
+
 static Vec3 M3MulV3(Mat3 m, Vec3 v) {
-    Vec3 result = {};
-    // TODO(student)
-    return result;
+    return (Vec3){V3Dot(m.r0, v), V3Dot(m.r1, v), V3Dot(m.r2, v)};
 }
 
 static Mat3 M3MulM3(Mat3 m1, Mat3 m2) {
-    Mat3 result = {};
-    // TODO(student)
-    return result;
+    Mat3 m2t = M3Transpose(m2);
+    return (Mat3){
+        V3Dot(m1.r0, m2t.r0), V3Dot(m1.r0, m2t.r1), V3Dot(m1.r0, m2t.r2),
+        V3Dot(m1.r1, m2t.r0), V3Dot(m1.r1, m2t.r1), V3Dot(m1.r1, m2t.r2),
+        V3Dot(m1.r2, m2t.r0), V3Dot(m1.r2, m2t.r1), V3Dot(m1.r2, m2t.r2)
+    };
 }
 
 static bool M3Eq(Mat3 m1, Mat3 m2) {
     return V3Eq(m1.r0, m2.r0) && V3Eq(m1.r1, m2.r1) && V3Eq(m1.r2, m2.r2);
-}
-
-static Mat3 M3Transpose(Mat3 m) {
-    Mat3 result = {};
-    // TODO(student)
-    return result;
 }
 
 static Mat3 M3Diag(float s00, float s11, float s22)  {
@@ -511,30 +517,93 @@ static Mat3 M3DiagS(float s) {
 }
 
 static float M3Det(Mat3 m) {
-    float result = 0.f;
-    // TODO(student)
-    return result;
+    return V3Dot(m.r0, V3Cross(m.r1, m.r2));
 }
 
 // Rotation of angle theta around a 3D axis
 static Mat3 M3Rotate(float theta, Vec3 axis) {
-    Mat3 result = {};
-    // TODO(student)
-    return result;
+    Vec3 unit = V3Normalize(axis);
+    float yz_proj_len = V2Length((Vec2){unit.y, unit.z});
+
+    if(yz_proj_len < EPSILON) {
+        float angle = (unit.x < 0.f) ? -theta : theta;
+        float c = cos(angle), s = sin(angle);
+        return (Mat3){
+            1.f, 0.f, 0.f,
+            0.f, c, -s,
+            0.f, s, c
+        };
+    }
+
+    float c = unit.z / yz_proj_len, s = unit.y / yz_proj_len;
+    Mat3 Rx = (Mat3){
+        1.f, 0.f, 0.f,
+        0.f, c, -s,
+        0.f, s, c
+    };
+
+    c = d;
+    s = -unit.x;
+    Mat3 Ry = (Mat3){
+        c, 0.f, s,
+        0.f, 1.f, 0.f,
+        -s, 0.f, c
+    };
+
+    c = cos(theta);
+    s = sin(theta);
+    Mat3 Rz = (Mat3){
+        c, -s, 0.f,
+        s, c, 0.f,
+        0.f, 0.f, 1.f
+    }
+
+    c = d;
+    s = unit.x;
+    Mat3 Ry_inv = (Mat3){
+        c, 0.f, s,
+        0.f, 1.f, 0.f,
+        -s, 0.f, c
+    };
+
+    c = unit.z / yz_proj_len;
+    s = -unit.y / yz_proj_len;
+    Mat3 Rx_inv = (Mat3){
+        1.f, 0.f, 0.f,
+        0.f, c, -s,
+        0.f, s, c
+    };
+
+    return M3MulM3(Rx_inv, M3MulM3(Ry_inv, M3MulM3(Rz, M3MulM3(Ry, Rx))));
 }
 
 // Rotates from 'source' into 'dest'
 static Mat3 M3RotateV(Vec3 source, Vec3 dest) {
-    Mat3 result = {};
-    // TODO(student)
-    return result;
+    Vec3 src_unit = V3Normalize(source);
+    Vec3 dst_unit = V3Normalize(dest);
+    float c = V3Dot(src_unit, dst_unit);
+    if(c > 1 - EPSILON) {
+        return M3DiagS(1.f,1.f,1.f);
+    }
+    if(c < EPSILON - 1) {
+        Vec3 non_paral = (fabsf(src_unit.x) < 1 - EPSILON) ? (Vec3){1.f,0.f,0.f} : (Vec3){0.f,1.f,0.f};
+        Vec3 ortho = V3Normalize(V3Cross(src_unit, non_paral));
+        return M3Rotate(PI, ortho);
+    }
+    Vec3 perp = V3Cross(src_unit, dst_unit);
+    float s = V3Length(perp);
+    float theta = atan2(s,c);
+    return M3Rotate(theta, perp);
 }
 
 static Mat3 M3Inverse(Mat3 m) {
-    Mat3 result = {};
-    // TODO(student)
-    
-    return result;
+    float det = M3Det(m);
+    if(fabsf(det) < EPSILON) return (Mat3){0};
+    return M3DivS((Mat3){
+        m.s11*m.s22-m.s12*m.s21, m.s02*m.s21-m.s01*m.s22, m.s01*m.s12-m.s02*m.s11,
+        m.s12*m.s20-m.s10*m.s22, m.s00*m.s22-m.s02*m.s20, m.s02*m.s10-m.s00*m.s12,
+        m.s10*m.s21-m.s11*m.s20, m.s01*m.s20-m.s00*m.s21, m.s00*m.s11-m.s01*m.s10
+    }, det);
 }
 
 static Mat4 M4Neg(Mat4 m) {
@@ -582,10 +651,17 @@ static Mat4 M4DivS(Mat4 m, float s) {
     return result;
 }
 
+static Mat4 M4Transpose(Mat4 m) {
+    return (Mat4){
+        m.s00, m.s10, m.s20, m.s30,
+        m.s01, m.s11, m.s21, m.s31,
+        m.s02, m.s12, m.s22, m.s32,
+        m.s03, m.s13, m.s23, m.s33
+    };
+}
+
 static Vec4 M4MulV4(Mat4 m, Vec4 v) {
-    Vec4 result = {};
-    // TODO(student)
-    return result;
+    return (Vec4){V4Dot(m.r0, v), V4Dot(m.r1, v), V4Dot(m.r2, v), V4Dot(m.r3, v)};
 }
 
 static Vec3 M4MulV3(Mat4 m, Vec3 v) {
@@ -596,19 +672,17 @@ static Vec3 M4MulV3(Mat4 m, Vec3 v) {
 }
 
 static Mat4 M4MulM4(Mat4 m1, Mat4 m2) {
-    Mat4 result = {};
-    // TODO(student)
-    return result;
+    Mat4 m2t = M4Transpose(m2);
+    return (Mat3){
+        V4Dot(m1.r0, m2t.r0), V4Dot(m1.r0, m2t.r1), V4Dot(m1.r0, m2t.r2), V4Dot(m1.r0, m2t.r3),
+        V3Dot(m1.r1, m2t.r0), V3Dot(m1.r1, m2t.r1), V3Dot(m1.r1, m2t.r2), V4Dot(m1.r1, m2t.r3),
+        V3Dot(m1.r2, m2t.r0), V3Dot(m1.r2, m2t.r1), V3Dot(m1.r2, m2t.r2), V4Dot(m1.r2, m2t.r3),
+        V4Dot(m1.r3, m2t.r0),  V4Dot(m1.r3, m2t.r1),  V4Dot(m1.r3, m2t.r2),  V4Dot(m1.r3, m2t.r3)
+    };
 }
 
 static bool M4Eq(Mat4 m1, Mat4 m2) {
     return V4Eq(m1.r0, m2.r0) && V4Eq(m1.r1, m2.r1) && V4Eq(m1.r2, m2.r2) && V4Eq(m1.r3, m2.r3);
-}
-
-static Mat4 M4Transpose(Mat4 m) {
-    Mat4 result = {};
-    // TODO(student)
-    return result;
 }
 
 static Mat4 M4Diag(float s00, float s11, float s22, float s33)  {
@@ -642,21 +716,48 @@ static Mat4 M4DiagS(float s) {
 }
 
 static float M4Det(Mat4 m) {
-    float result = 0.f;
-    // TODO(student)
-    return result;
+    return V4Dot(m.r0, (Vec4){
+        M3Det((Mat3){
+            m.s11, m.s12, m.s13,
+            m.s21, m.s22, m.s23,
+            m.s31, m.s32, m.s33
+        }),
+        -M3Det((Mat3){
+            m.s10, m.s12, m.s13,
+            m.s20, m.s22, m.s23,
+            m.s30, m.s32, m.s33
+        }),
+        M3Det((Mat3){
+            m.s10, m.s11, m.s13,
+            m.s20, m.s21, m.s23,
+            m.s30, m.s31, m.s33
+        }),
+        -M3Det((Mat3){
+            m.s10, m.s11, m.s12,
+            m.s20, m.s21, m.s22,
+            m.s30, m.s31, m.s32
+        })
+    });
 }
 
 static Mat4 M4Rotate(float theta, Vec3 axis) {
-    Mat4 result = {};
-    // TODO(student)
-    return result;
+    Mat3 r = M3Rotate(theta, axis);
+    return (Mat4){
+        r.s00, r.s01, r.s02, 0.f,
+        r.s10, r.s11, r.s12, 0.f,
+        r.s20, r.s21, r.s22, 0.f,
+        0.f, 0.f, 0.f, 1.f
+    };
 }
 
 static Mat4 M4RotateV(Vec3 source, Vec3 dest) {
-    Mat4 result = {};
-    // TODO(student)
-    return result;
+    Mat3 r = M3RotateV(source, dest);
+    return (Mat4){
+        r.s00, r.s01, r.s02, 0.f,
+        r.s10, r.s11, r.s12, 0.f,
+        r.s20, r.s21, r.s22, 0.f,
+        0.f, 0.f, 0.f, 1.f
+    };
 }
 
 static Mat4 M4Scale(float x, float y, float z) {
@@ -673,7 +774,9 @@ static Mat4 M4ScaleS(float s) {
 
 static Mat4 M4Translate(Vec3 v) {
     Mat4 result = M4DiagS(1.f);
-    // TODO(student)
+    result.s03 = v.x;
+    result.s13 = v.y;
+    result.s23 = v.z;
     return result;
 }
 
@@ -682,21 +785,32 @@ static Mat4 M4Identity() {
 }
 
 static Mat4 M4Orthographic(float left, float right, float bottom, float top, float zNear, float zFar) {
-    Mat4 result = {};
-    // TODO(student)
-    return result;
+    return M4MulM4(M4ScaleV3((Vec3){2.f/(right-left), 2.f/(top-bottom), -2.f/(zFar-zNear)}),
+    M4Translate((Vec3){-(right+left)/2.f, -(top+bottom)/2.f, (zFar+zNear)/2.f}));
 }
 
 static Mat4 M4Perspective(float fov, float aspect, float zNear, float zFar) {
-    Mat4 result = {};
-    // TODO(student)
+    Mat4 result = {0};
+    float t = tan(fov/2.f);
+    result.s00 = 1.f/(aspect*t);
+    result.s11 = 1.f/t;
+    result.s22 = -(zFar+zNear)/(zFar-zNear);
+    result.s23 = -(2.f*zFar*zNear)/(zFar-zNear);
+    result.s32 = -1.f;
     return result;
 }
 
 static Mat4 M4LookAt(Vec3 eye, Vec3 target, Vec3 up) {
     Mat4 result = {};
-    // TODO(student)
-    return result;
+    Vec3 z = V3Normalize(V3Sub(eye, target));
+    Vec3 x = V3Normalize(V3Cross(up, z));
+    Vec3 y = V3Cross(z, x);
+    return M4MulM4((Mat4){
+        x.x, x.y, x.z, 0.f,
+        y.x, y.y, y.z, 0.f,
+        z.x, z.y, z.z, 0.f,
+        0.f, 0.f, 0.f, 1.f
+    }, M4Transalte(V3MulS(eye, -1)));
 }
 
 #endif // MATH_HEADER

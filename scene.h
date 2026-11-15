@@ -4,9 +4,24 @@
 #include "model.h"
 #include "math.h"
 
+typedef enum {
+    PROJ_PERSPECTIVE,
+    PROJ_ORTHOGRAPHIC
+} ProjectionType;
+
 typedef struct Camera {
-    Vec3 Position;
-    // TODO(student)
+    Vec3 position;
+    Vec3 target;
+    Vec3 up;
+
+    ProjectionType projection;
+
+    float fov;
+    float aspect;
+    float zNear;
+    float zFar;
+
+    float orthoSize;
 } Camera;
 
 typedef struct Scene {
@@ -22,6 +37,8 @@ typedef struct Scene {
 
 void AddModel(Scene *scene, Model model);
 void RemoveModel(Scene *scene, int modelIndex);
+static Mat4 GetView(Camera* cam);
+static Mat4 GetView(Camera* cam);
 
 #endif // SCENE_HEADER
 
@@ -31,6 +48,19 @@ void RemoveModel(Scene *scene, int modelIndex);
 #define SCENE_IMPLEMENTED
 
 #include "stb_ds.h" // For dynamic arrays
+
+static Mat4 GetView(Camera* cam) {
+    return M4LookAt(cam->position, cam->target, cam->up);
+}
+
+static Mat4 GetView(Camera* cam) {
+    if(cam->projection == PROJ_ORTHOGRAPHIC) {
+        float halfH = cam->orthoSize * 0.5f;
+        float halfW = halfH * cam->aspect;
+        return M4Orthographic(-halfW, halfW, -halfH, halfH, cam->zNear, cam->zFar);
+    }
+    return M4Perspective(cam->fov, cam->aspect, cam->zNear, cam->zFar);
+}
 
 void AddModel(Scene *scene, Model model) {
     arrput(scene->models, model);
