@@ -2,7 +2,6 @@
 #define MATH_HEADER
 
 #define EPSILON 1e-8f
-#define PI 3.14159265F
 #define MIN(a, b) (((a) > (b)) ? (b) : (a))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define ABS(a) (((a) >= 0) ? (a) : -(a))
@@ -542,7 +541,7 @@ static Mat3 M3Rotate(float theta, Vec3 axis) {
         0.f, s, c
     };
 
-    c = d;
+    c = yz_proj_len;
     s = -unit.x;
     Mat3 Ry = (Mat3){
         c, 0.f, s,
@@ -556,9 +555,9 @@ static Mat3 M3Rotate(float theta, Vec3 axis) {
         c, -s, 0.f,
         s, c, 0.f,
         0.f, 0.f, 1.f
-    }
+    };
 
-    c = d;
+    c = yz_proj_len;
     s = unit.x;
     Mat3 Ry_inv = (Mat3){
         c, 0.f, s,
@@ -583,7 +582,7 @@ static Mat3 M3RotateV(Vec3 source, Vec3 dest) {
     Vec3 dst_unit = V3Normalize(dest);
     float c = V3Dot(src_unit, dst_unit);
     if(c > 1 - EPSILON) {
-        return M3DiagS(1.f,1.f,1.f);
+        return M3DiagS(1.f);
     }
     if(c < EPSILON - 1) {
         Vec3 non_paral = (fabsf(src_unit.x) < 1 - EPSILON) ? (Vec3){1.f,0.f,0.f} : (Vec3){0.f,1.f,0.f};
@@ -673,10 +672,10 @@ static Vec3 M4MulV3(Mat4 m, Vec3 v) {
 
 static Mat4 M4MulM4(Mat4 m1, Mat4 m2) {
     Mat4 m2t = M4Transpose(m2);
-    return (Mat3){
+    return (Mat4){
         V4Dot(m1.r0, m2t.r0), V4Dot(m1.r0, m2t.r1), V4Dot(m1.r0, m2t.r2), V4Dot(m1.r0, m2t.r3),
-        V3Dot(m1.r1, m2t.r0), V3Dot(m1.r1, m2t.r1), V3Dot(m1.r1, m2t.r2), V4Dot(m1.r1, m2t.r3),
-        V3Dot(m1.r2, m2t.r0), V3Dot(m1.r2, m2t.r1), V3Dot(m1.r2, m2t.r2), V4Dot(m1.r2, m2t.r3),
+        V4Dot(m1.r1, m2t.r0), V4Dot(m1.r1, m2t.r1), V4Dot(m1.r1, m2t.r2), V4Dot(m1.r1, m2t.r3),
+        V4Dot(m1.r2, m2t.r0), V4Dot(m1.r2, m2t.r1), V4Dot(m1.r2, m2t.r2), V4Dot(m1.r2, m2t.r3),
         V4Dot(m1.r3, m2t.r0),  V4Dot(m1.r3, m2t.r1),  V4Dot(m1.r3, m2t.r2),  V4Dot(m1.r3, m2t.r3)
     };
 }
@@ -801,7 +800,6 @@ static Mat4 M4Perspective(float fov, float aspect, float zNear, float zFar) {
 }
 
 static Mat4 M4LookAt(Vec3 eye, Vec3 target, Vec3 up) {
-    Mat4 result = {};
     Vec3 z = V3Normalize(V3Sub(eye, target));
     Vec3 x = V3Normalize(V3Cross(up, z));
     Vec3 y = V3Cross(z, x);
@@ -810,7 +808,7 @@ static Mat4 M4LookAt(Vec3 eye, Vec3 target, Vec3 up) {
         y.x, y.y, y.z, 0.f,
         z.x, z.y, z.z, 0.f,
         0.f, 0.f, 0.f, 1.f
-    }, M4Transalte(V3MulS(eye, -1)));
+    }, M4Translate(V3MulS(eye, -1)));
 }
 
 #endif // MATH_HEADER

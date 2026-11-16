@@ -42,7 +42,8 @@ Model MakeCube() {
 
 // TODO
 Model MakeSphere() {
-  Model sphere = {};
+    Model sphere = {};
+    return sphere;
 }
 
 #endif //PRIMITIVES_HEADER
