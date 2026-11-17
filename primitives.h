@@ -31,9 +31,52 @@ Model MakeCube() {
   return cube;
 }
 
-// TODO
+// sphere with diameter 1, the poles are on the y axis
 Model MakeSphere() {
     Model sphere = NewModel();
+    int rings = 8;
+    int segments = 16;
+    float radius = 0.5f;
+
+    arrput(sphere.vertices, ((Vec3){0.f, radius, 0.f}));
+    for (int r = 1; r <= rings; r++) {
+        float phi = PI * r / (rings + 1);
+        for (int s = 0; s < segments; s++) {
+            float theta = 2.f * PI * s / segments;
+            arrput(sphere.vertices, ((Vec3){radius * sin(phi) * cos(theta),
+                                            radius * cos(phi),
+                                            radius * sin(phi) * sin(theta)}));
+        }
+    }
+    arrput(sphere.vertices, ((Vec3){0.f, -radius, 0.f}));
+
+    int south = (int)arrlen(sphere.vertices);
+    int lastRing = 2 + (rings - 1) * segments;
+    for (int s = 0; s < segments; s++) {
+        int next = (s + 1) % segments;
+        arrput(sphere.triangles, ((Triangle){ .vertices = {1, 2 + next, 2 + s} }));
+        arrput(sphere.triangles, ((Triangle){ .vertices = {south, lastRing + s, lastRing + next} }));
+    }
+    for (int r = 0; r < rings - 1; r++) {
+        for (int s = 0; s < segments; s++) {
+            int next = (s + 1) % segments;
+            int a = 2 + r * segments + s, b = 2 + r * segments + next;
+            int c = a + segments, d = b + segments;
+            arrput(sphere.triangles, ((Triangle){ .vertices = {a, b, c} }));
+            arrput(sphere.triangles, ((Triangle){ .vertices = {b, d, c} }));
+        }
+    }
+
+    for (int i = 0; i < arrlen(sphere.vertices); i++) {
+        arrput(sphere.normals, V3Normalize(sphere.vertices[i]));
+    }
+    for (int t = 0; t < arrlen(sphere.triangles); t++) {
+        for (int k = 0; k < 3; k++) {
+            sphere.triangles[t].normals[k] = sphere.triangles[t].vertices[k];
+        }
+    }
+
+    sphere.vertexCount = (int)arrlen(sphere.vertices);
     return sphere;
 }
 
