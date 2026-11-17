@@ -47,7 +47,8 @@ void RenderScene(Scene *scene, Renderer *renderer, double time);
 #define RENDER_COLOR_WHITE   (Vec4){1.f, 1.f, 1.f, 1.f}
 #define RENDER_COLOR_GREEN   (Vec4){0.f, 1.f, 0.f, 1.f}
 #define RENDER_COLOR_YELLOW  (Vec4){1.f, 1.f, 0.f, 1.f}
-#define RENDER_COLOR_MAGENTA (Vec4){1.f, 0.f, 1.f, 1.f}
+#define RENDER_COLOR_PURPLE  (Vec4){1.f, 0.f, 1.f, 1.f}
+#define RENDER_COLOR_RED     (Vec4){1.f, 0.f, 0.f, 1.f}
 
 static void PlotPixel(Renderer *r, int x, int y, Vec4 color) {
     RenderSettings *s = r->settings;
@@ -135,7 +136,23 @@ void RenderScene(Scene *scene, Renderer *renderer, double time) {
     Mat4 fromWorldToCamera  = GetView(&cam);
     Mat4 fromCameraToScreen = GetProjection(&cam);
     Mat4 fromWorldToScreen  = M4MulM4(fromCameraToScreen, fromWorldToCamera);
+    for (int c = 0; c < arrlen(scene->cameras); ++c) {
+        if (c == scene->activeCameraIndex) {
+            continue;
+        }
 
+        Vec3 p = scene->cameras[c].position;
+        Vec4 q = M4MulV4(fromWorldToScreen, (Vec4){p.x, p.y, p.z, 1.f});
+        if (q.w <= EPSILON || q.z < -q.w) {
+            continue;
+        }
+
+        int cx = (int)((q.x / q.w + 1.f) / 2.f * (settings->width  - 1));
+        int cy = (int)((q.y / q.w + 1.f) / 2.f * (settings->height - 1));
+
+        DrawLineBresenham(renderer, cx - 10, cy, cx + 10, cy, RENDER_COLOR_RED);
+        DrawLineBresenham(renderer, cx, cy - 10, cx, cy + 10, RENDER_COLOR_RED);
+    }
 
     for (int modelIndex = 0; modelIndex < arrlen(scene->models); ++modelIndex) {
         Model model = scene->models[modelIndex];
@@ -279,7 +296,7 @@ void RenderScene(Scene *scene, Renderer *renderer, double time) {
             for (int e = 0; e < 12; e++) {
                 int a = edges[e][0], b = edges[e][1];
                 if (bok[a] && bok[b]) {
-                    DrawLineBresenham(renderer, bx[a], by[a], bx[b], by[b], RENDER_COLOR_MAGENTA);
+                    DrawLineBresenham(renderer, bx[a], by[a], bx[b], by[b], RENDER_COLOR_PURPLE);
                 }
             }
         }

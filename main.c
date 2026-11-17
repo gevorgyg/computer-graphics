@@ -49,7 +49,7 @@ int main()
     sphere.position = (Vec3){-2.5f, 0.f, 0.f};
     AddModel(&scene, sphere);
     }
-    { // Default camera
+    { // default camera
         Camera camera = {};
         camera.position   = (Vec3){0.f, 0.f, 5.f};
         camera.target     = (Vec3){0.f, 0.f, 0.f};
@@ -60,12 +60,17 @@ int main()
         camera.zFar       = 100.f;
         camera.orthoSize  = 4.f;
         arrput(scene.cameras, camera);
+
+        
+        Camera second = camera;
+        second.position = (Vec3){3.f, 0.f, -2.f};
+        arrput(scene.cameras, second);
     }
     
     RenderSettings renderSettings = {};
     renderSettings.tint = (Vec4){.42f, .20f, .47f, 1.f};
-    renderSettings.showBoundingBox = false;
-    renderSettings.showFaceNormals = false;
+    renderSettings.showBoundingBox = true;
+    renderSettings.showFaceNormals = true;
     renderSettings.showVertexNormals = true;
     renderSettings.problemX = 300;
     renderSettings.problemY = 300;
