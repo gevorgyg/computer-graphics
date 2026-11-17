@@ -20,6 +20,7 @@ typedef struct RenderSettings {
     bool showDebugLayer;
     bool showBoundingBox;
     bool showFaceNormals;
+    bool showVertexNormals;
     Vec4 tint;
     int problemX, problemY;
     
@@ -42,6 +43,11 @@ void RenderScene(Scene *scene, Renderer *renderer, double time);
 #define RENDERER_IMPLEMENTED
 
 #include "stb_ds.h" // For dynamic arrays
+
+#define RENDER_COLOR_WHITE   (Vec4){1.f, 1.f, 1.f, 1.f}
+#define RENDER_COLOR_GREEN   (Vec4){0.f, 1.f, 0.f, 1.f}
+#define RENDER_COLOR_YELLOW  (Vec4){1.f, 1.f, 0.f, 1.f}
+#define RENDER_COLOR_MAGENTA (Vec4){1.f, 0.f, 1.f, 1.f}
 
 static void PlotPixel(Renderer *r, int x, int y, Vec4 color) {
     RenderSettings *s = r->settings;
@@ -133,7 +139,14 @@ void RenderScene(Scene *scene, Renderer *renderer, double time) {
 
     for (int modelIndex = 0; modelIndex < arrlen(scene->models); ++modelIndex) {
         Model model = scene->models[modelIndex];
-        if (model.hidden) {   
+        if (model.hidden) {
+            TraceLog(LOG_INFO, "Model modelIndex==%d is hidden", modelIndex);
+            continue;
+        }
+
+        if (model.vertexCount <= 0) {
+            TraceLog(LOG_ERROR, "Model modelIndex==%d has no vertices!! model.vertexCount==%d",
+                     modelIndex, model.vertexCount);
             continue;
         }
         Mat4 fromModelToWorld  = GetModelMatrix(&model);
@@ -167,7 +180,7 @@ void RenderScene(Scene *scene, Renderer *renderer, double time) {
                 if (!ok[i] || !ok[j]) {
                     continue;
                 }
-                DrawLineBresenham(renderer, px[i], py[i], px[j], py[j], (Vec4){1.f, 1.f, 1.f, 1.f});
+                DrawLineBresenham(renderer, px[i], py[i], px[j], py[j], RENDER_COLOR_WHITE);
             }
         }
 
@@ -195,11 +208,47 @@ void RenderScene(Scene *scene, Renderer *renderer, double time) {
                     sx[e] = (int)((q.x / q.w + 1.f) / 2.f * (settings->width  - 1));
                     sy[e] = (int)((q.y / q.w + 1.f) / 2.f * (settings->height - 1));
                 }
-                if (visible) DrawLineBresenham(renderer, sx[0], sy[0], sx[1], sy[1], (Vec4){0.f, 1.f, 0.f, 1.f});
+                if (visible) {
+                    DrawLineBresenham(renderer, sx[0], sy[0], sx[1], sy[1], RENDER_COLOR_GREEN);
+                }
             }
         }
 
-        if (settings->showBoundingBox && model.vertexCount > 0) {
+        if (settings->showVertexNormals && arrlen(model.normals) > 0) {
+            for (int t = 0; t < arrlen(model.triangles); ++t) {
+                Triangle tri = model.triangles[t];
+                for (int k = 0; k < 3; ++k) {
+                    int vi = tri.vertices[k] - 1;
+                    int ni = tri.normals[k] - 1;
+                    if (vi < 0 || vi >= model.vertexCount || ni < 0 || ni >= arrlen(model.normals)) {
+                        continue;
+                    }
+
+                    Vec3 ends[2];
+                    ends[0] = model.vertices[vi];
+                    ends[1] = V3Add(ends[0], V3MulS(model.normals[ni], 0.2f));
+
+                    int sx[2], sy[2];
+                    bool visible = true;
+                    for (int e = 0; e < 2; ++e) {
+                        Vec4 q = M4MulV4(fromModelToScreen, (Vec4){ends[e].x, ends[e].y, ends[e].z, 1.f});
+                        if (q.w <= EPSILON || q.z < -q.w) { visible = false; break; }
+                        sx[e] = (int)((q.x / q.w + 1.f) / 2.f * (settings->width  - 1));
+                        sy[e] = (int)((q.y / q.w + 1.f) / 2.f * (settings->height - 1));
+                    }
+                    if (visible) {
+                        DrawLineBresenham(renderer, sx[0], sy[0], sx[1], sy[1], RENDER_COLOR_YELLOW);
+                    }
+                        
+                }
+            }
+        } else if (arrlen(model.normals) <= 0) {
+            TraceLog(LOG_ERROR, "showVertexNormals can't be enabled: modelIndex == %d has %d vertex normals",
+                     modelIndex, arrlen(model.normals));
+        }
+
+
+        if (settings->showBoundingBox) {
             Vec3 lo = model.vertices[0], hi = model.vertices[0];
             for (int i = 1; i < model.vertexCount; i++) {
                 Vec3 v = model.vertices[i];
@@ -230,15 +279,11 @@ void RenderScene(Scene *scene, Renderer *renderer, double time) {
             for (int e = 0; e < 12; e++) {
                 int a = edges[e][0], b = edges[e][1];
                 if (bok[a] && bok[b]) {
-                    DrawLineBresenham(renderer, bx[a], by[a], bx[b], by[b], (Vec4){1.f, 0.f, 1.f, 1.f});
+                    DrawLineBresenham(renderer, bx[a], by[a], bx[b], by[b], RENDER_COLOR_MAGENTA);
                 }
             }
-        } else if (model.vertexCount <= 0) {
-            TraceLog(LOG_ERROR, "Model modelIndex==%d has no vertices!! model.vertexCount==%d",
-                     modelIndex, model.vertexCount);
         }
-
-
+    
     }
 }
 

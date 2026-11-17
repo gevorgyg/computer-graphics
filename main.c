@@ -41,8 +41,15 @@ int main()
     { // TODO(student): Move this to the UI
         const char *modelPath = TextFormat("%s" PATH_SEPERATOR "models" PATH_SEPERATOR "monkey.obj", GetApplicationDirectory());
         AddModel(&scene, LoadModelFromObjFile(modelPath));
+    Model cube = MakeCube();
+    cube.position = (Vec3){2.5f, 0.f, 0.f};
+    AddModel(&scene, cube);
+
+    Model sphere = MakeSphere();
+    sphere.position = (Vec3){-2.5f, 0.f, 0.f};
+    AddModel(&scene, sphere);
     }
-    { // Default camera, so there is something to render from
+    { // Default camera
         Camera camera = {};
         camera.position   = (Vec3){0.f, 0.f, 5.f};
         camera.target     = (Vec3){0.f, 0.f, 0.f};
@@ -57,8 +64,9 @@ int main()
     
     RenderSettings renderSettings = {};
     renderSettings.tint = (Vec4){.42f, .20f, .47f, 1.f};
-    renderSettings.showBoundingBox = true;
-    renderSettings.showFaceNormals = true;
+    renderSettings.showBoundingBox = false;
+    renderSettings.showFaceNormals = false;
+    renderSettings.showVertexNormals = true;
     renderSettings.problemX = 300;
     renderSettings.problemY = 300;
     renderSettings.showDebugLayer = true;
