@@ -20,6 +20,8 @@ typedef struct RenderSettings {
     bool showDebugLayer;
     Vec4 tint;
     int problemX, problemY;
+    bool showBoundingBox;
+    bool showFaceNormals;
     
     RenderingMethod renderingMethod;
 } RenderSettings;

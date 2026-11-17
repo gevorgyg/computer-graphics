@@ -20,8 +20,9 @@ typedef struct Model {
   
   // Model transformation data
   Vec3 position;
+  Vec3 rotation;
+  Vec3 scale;
   bool hidden;
-  // TODO(student) ...
     
   // GPU handles (HW3)
   unsigned int gpuVertexBufferId;

@@ -313,6 +313,26 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
             
             GuiToggle(rect, GuiIconText(ICON_LAYERS2, NULL), &settings->showDebugLayer);
         }
+        {
+            Rectangle rect = (Rectangle) { right - 2*margin, scrollTop, 2*margin, 2*margin };
+            right -= rect.width + 2;
+
+            if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+                tooltip = settings->showBoundingBox ? "Hide bounding boxes" : "Show bounding boxes";
+            }
+
+            GuiToggle(rect, "BB", &settings->showBoundingBox);
+        }
+        {
+            Rectangle rect = (Rectangle) { right - 2*margin, scrollTop, 2*margin, 2*margin };
+            right -= rect.width + 2;
+
+            if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+                tooltip = settings->showFaceNormals ? "Hide face normals" : "Show face normals";
+            }
+
+            GuiToggle(rect, "N", &settings->showFaceNormals);
+        }
         
         BOX_FLOAT(&scene->step, &left, uiTop + 4, "Set the step size when moving with WASD");
         BOX_INT(&settings->problemX, &left, uiTop + 4, "Problem Pixel X");
@@ -369,9 +389,8 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                     tooltip = "Add Cube";
                 }
                 if (GuiButton(rect, GuiIconText(ICON_CUBE, NULL))) {
-                    // TODO(student)
-                    // Model primitive = MakePrimitiveCube();
-                    // AddModel(scene, primitive);
+                    Model primitive = MakeCube();
+                    AddModel(scene, primitive);
                 }
             }
             // Other primitives
@@ -379,7 +398,7 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
         uiTop += 2*margin + margin;
         
         { // Transform controls for the active model
-            Model dummyModel = {};
+            Model dummyModel = NewModel();
             Model *activeModel = NULL;
             static bool lock = false;
             
@@ -411,7 +430,19 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                 BOX_FLOAT(&activeModel->position.y, &left, uiTop, NULL);
                 BOX_FLOAT(&activeModel->position.z, &left, uiTop, NULL);
             }
-            // TODO(student) ...
+
+            uiTop += rowHeight + 2;
+            left = uiLeft + margin;
+            {
+                const char *label = "orientation: ";
+                Rectangle rect = (Rectangle) { left, uiTop, 100, 16 };
+                GuiDrawText(label, rect, TEXT_ALIGN_LEFT, GetColor(GuiGetStyle(DEFAULT, TEXT)));
+                left += rect.width + 2;
+
+                BOX_FLOAT(&activeModel->rotation.x, &left, uiTop, NULL);
+                BOX_FLOAT(&activeModel->rotation.y, &left, uiTop, NULL);
+                BOX_FLOAT(&activeModel->rotation.z, &left, uiTop, NULL);
+            }
             
             uiTop += rowHeight;
             
@@ -438,7 +469,7 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
         
         { // Model list controls
             int rowHeight = 2*margin;
-            int itemCount = 6;
+            int itemCount = 4;
             int modelCount = arrlen(scene->models);
             
             static Rectangle modelPanelView = { 0 };
@@ -491,7 +522,6 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                         if (scene->activeModelIndex >= modelIndex) scene->activeModelIndex -= 1;
                     }
                 }
-                // TODO(student) ...
                 
                 {
                     const char *label = TextFormat(" Model %3d", modelIndex);
@@ -532,6 +562,254 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
             }
             EndScissorMode();
             
+            if (lock) GuiUnlock();
+        }
+    }
+
+    static bool showCameraControls = true;
+    {
+        Rectangle rect = (Rectangle) { uiLeft - margin/2, uiTop + margin/2, margin, margin };
+        GuiCheckBox(rect,  NULL, &showCameraControls);
+
+        GuiLine((Rectangle) { uiLeft + margin, uiTop + margin, uiWidth - margin*2, 0 }, "Camera Controls");
+        uiTop += 2*margin;
+    }
+
+    if (showCameraControls) {
+        {
+            float left = uiLeft + margin;
+            int right = uiRect.x + uiRect.width - margin;
+            {
+                Rectangle rect = (Rectangle) { right - iconButtonSize, uiTop, iconButtonSize, iconButtonSize };
+                right -= iconButtonSize + 2;
+
+                if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+                    tooltip = "Control active camera with keyboard";
+                }
+
+                // TODO(student)
+            }
+
+            {
+                Rectangle rect = (Rectangle) { left, uiTop, 2*margin, 2*margin };
+                left += rect.width + 2;
+
+                if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+                    tooltip = "Add Camera";
+                }
+                if (GuiButton(rect, GuiIconText(ICON_LENS_BIG, NULL))) {
+                    Camera defCam = DefaultCamera();
+                    AddCamera(scene, defCam);
+                }
+            }
+        }
+        uiTop += 2*margin + margin;
+
+        { // Transform controls for the active camera
+            Camera dummyCamera = {};
+            Camera *activeCamera = NULL;
+            static bool lock = false;
+
+            if (0 < arrlen(scene->cameras) && 0 <= scene->activeCameraIndex && scene->activeCameraIndex < arrlen(scene->cameras)) {
+                activeCamera = &scene->cameras[scene->activeCameraIndex];
+                lock = false;
+            } else {
+                // If there's no active camera selected, we want to draw the same UI but locked
+                // so we have a dummy camera to prevent illegal pointer access when drawing the GUI
+                activeCamera = &dummyCamera;
+
+                // We want to lock only if the gui is not already locked so we don't unlock it later
+                // if it was intended to stay locked (for example if the file dialog is open)
+                lock = !GuiIsLocked();
+            }
+            if (lock) GuiLock();
+
+            float rowHeight = 16;
+            float controlTop = uiTop;
+
+            float left = uiLeft + margin;
+            {
+                const char *label = "position: ";
+                Rectangle rect = (Rectangle) { left, uiTop, 100, 16 };
+                GuiDrawText(label, rect, TEXT_ALIGN_LEFT, GetColor(GuiGetStyle(DEFAULT, TEXT)));
+                left += rect.width + 2;
+
+                BOX_FLOAT(&activeCamera->position.x, &left, uiTop, NULL);
+                BOX_FLOAT(&activeCamera->position.y, &left, uiTop, NULL);
+                BOX_FLOAT(&activeCamera->position.z, &left, uiTop, NULL);
+            }
+
+            uiTop += rowHeight + 2;
+            left = uiLeft + margin;
+            {
+                const char *label = "orientation: ";
+                Rectangle rect = (Rectangle) { left, uiTop, 100, 16 };
+                GuiDrawText(label, rect, TEXT_ALIGN_LEFT, GetColor(GuiGetStyle(DEFAULT, TEXT)));
+                left += rect.width + 2;
+
+                BOX_FLOAT(&activeCamera->orientation.x, &left, uiTop, NULL);
+                BOX_FLOAT(&activeCamera->orientation.y, &left, uiTop, NULL);
+                BOX_FLOAT(&activeCamera->orientation.z, &left, uiTop, NULL);
+            }
+
+            uiTop += rowHeight + 2;
+            left = uiLeft + margin;
+            {
+                const char *label = "projection: ";
+                Rectangle labelRect = (Rectangle) { left, uiTop, 100, 16 };
+                GuiDrawText(label, labelRect, TEXT_ALIGN_LEFT, GetColor(GuiGetStyle(DEFAULT, TEXT)));
+                left += labelRect.width + 2;
+
+                const char* projText = (activeCamera->projection == PROJ_PERSPECTIVE) ? "Perspective" : "Orthographic";
+                Rectangle buttonRect = (Rectangle) { left, uiTop, 124, 16 };
+                if(GuiButton(buttonRect, projText)) {
+                    activeCamera->projection = (activeCamera->projection == PROJ_PERSPECTIVE) ? PROJ_ORTHOGRAPHIC : PROJ_PERSPECTIVE;
+                }
+            }
+
+			uiTop += rowHeight + 2;
+            left = uiLeft + margin;
+            {
+                if(activeCamera->projection == PROJ_PERSPECTIVE) {
+				    const char *label = "fov (degrees): ";
+                    Rectangle rect = (Rectangle) { left, uiTop, 100, 16 };
+                    GuiDrawText(label, rect, TEXT_ALIGN_LEFT, GetColor(GuiGetStyle(DEFAULT, TEXT)));
+                    left += rect.width + 2;
+
+                    float fovDeg = activeCamera->fov * RAD2DEG;
+                    BOX_FLOAT(&fovDeg, &left, uiTop, "Vertical field of view");
+                    activeCamera->fov = CLAMP(fovDeg, 1.f, 179.f) * DEG2RAD;
+                } else {
+                    const char *label = "ortho size: ";
+                    Rectangle rect = (Rectangle) { left, uiTop, 100, 16 };
+                    GuiDrawText(label, rect, TEXT_ALIGN_LEFT, GetColor(GuiGetStyle(DEFAULT, TEXT)));
+                    left += rect.width + 2;
+
+					BOX_FLOAT_CLAMP0(&activeCamera->orthoSize, &left, uiTop, "Orthographic view height");
+                }
+            }
+
+            uiTop += rowHeight + 2;
+            left = uiLeft + margin;
+            {
+				const char *label = "near/far: ";
+                Rectangle rect = (Rectangle) { left, uiTop, 100, 16 };
+                GuiDrawText(label, rect, TEXT_ALIGN_LEFT, GetColor(GuiGetStyle(DEFAULT, TEXT)));
+                left += rect.width + 2;
+
+                BOX_FLOAT_CLAMP0(&activeCamera->zNear, &left, uiTop, "Near plane");
+                BOX_FLOAT_CLAMP0(&activeCamera->zFar, &left, uiTop, "Far plane");
+            }
+
+            uiTop += rowHeight;
+
+            if (activeCamera != &dummyCamera) {
+				SyncCameraWithOrientation(activeCamera);
+            } else {
+                Rectangle rect = (Rectangle) {uiLeft - margin, controlTop - margin/2, uiWidth, uiTop - controlTop + margin};
+                int textAlignStyle = GuiGetStyle(DEFAULT, TEXT_ALIGNMENT_VERTICAL);
+
+                GuiSetStyle(DEFAULT, TEXT_ALIGNMENT_VERTICAL, TEXT_ALIGN_MIDDLE);
+
+                Color backcolor = GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED));
+                backcolor.a = 230;
+                GuiDrawRectangle(rect, 2,
+                                 GetColor(GuiGetStyle(BORDER, BORDER_COLOR_DISABLED)),
+                                 backcolor);
+                GuiDrawText("No camera selected", rect, TEXT_ALIGN_CENTER,
+                            GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_DISABLED)));
+
+                GuiSetStyle(DEFAULT, TEXT_ALIGNMENT_VERTICAL, textAlignStyle);
+            }
+            uiTop += margin;
+
+            if (lock) GuiUnlock();
+        }
+
+        { // Camera list controls
+            int rowHeight = 2*margin;
+            int itemCount = 4;
+            int cameraCount = arrlen(scene->cameras);
+
+            static Rectangle cameraPanelView = { 0 };
+            Rectangle scrollRect = (Rectangle) { uiLeft - 1, uiTop - 1, uiWidth - 2*margin + 2, itemCount*(rowHeight + 2) };
+            Rectangle contentRect = scrollRect;
+            contentRect.x += 1;
+            contentRect.y += 1;
+            int scrollBarWidth = GuiGetStyle(LISTVIEW, SCROLLBAR_WIDTH) + 2*GuiGetStyle(DEFAULT, BORDER_WIDTH);
+            contentRect.width -= scrollBarWidth + 2;
+            contentRect.height = cameraCount * (rowHeight + 2);
+            static Vector2 cameraPanelScroll = { 0, 0 };
+            GuiScrollPanel(scrollRect, NULL, contentRect, &cameraPanelScroll, &cameraPanelView);
+            int scrollTop = contentRect.y + cameraPanelScroll.y;
+
+            if (contentRect.height < scrollRect.height) {
+                GuiDrawRectangle((Rectangle) {scrollRect.x + scrollRect.width - scrollBarWidth, scrollRect.y + 1, scrollBarWidth - 1, scrollRect.height - 2 }, 0, WHITE, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_NORMAL)));
+            }
+
+            uiTop += scrollRect.height + 2;
+            bool lock = !CheckCollisionPointRec(GetMousePosition(), scrollRect) && !GuiIsLocked();
+            if (lock) GuiLock();
+
+            BeginScissorMode(cameraPanelView.x, cameraPanelView.y, cameraPanelView.width, cameraPanelView.height);
+
+            for (int cameraIndex = 0; cameraIndex < cameraCount; ++cameraIndex) {
+                int left  = contentRect.x;
+                int right = contentRect.x + contentRect.width;
+
+                {
+                    Rectangle rect = (Rectangle) { right - 2*margin, scrollTop, 2*margin, 2*margin };
+                    right -= rect.width + 2;
+
+                    if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+                        tooltip = "Delete Camera";
+                    }
+
+                    if (GuiButton(rect, GuiIconText(ICON_BIN, NULL)) && cameraCount > 1) {
+                        RemoveCamera(scene, cameraIndex);
+                        if (scene->activeCameraIndex >= cameraIndex) scene->activeCameraIndex -= 1;
+                        break;
+                    }
+                }
+                {
+                    const char *label = TextFormat(" Camera %3d", cameraIndex);
+                    Rectangle rect = (Rectangle) { left, scrollTop, right-left, 2*margin };
+
+                    bool hovered = false;
+                    if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+                        if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                            if (scene->activeCameraIndex != cameraIndex) {
+                                scene->activeCameraIndex = cameraIndex;
+                            } else {
+                                scene->activeCameraIndex = -1;
+                            }
+                        }
+
+                        hovered = true;
+                    }
+
+                    bool active = cameraIndex == scene->activeCameraIndex;
+
+                    Color backColor = GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR));
+                    Color textColor = GetColor(GuiGetStyle(DEFAULT, TEXT));
+                    int border = 0;
+                    if (active) {
+                        backColor = GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_PRESSED));
+                        textColor = GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_PRESSED));
+                    } else if (hovered) {
+                        backColor = GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_FOCUSED));
+                        textColor = GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_FOCUSED));
+                    }
+                    if (hovered) border = 2;
+
+                    GuiDrawRectangle(rect, border, GetColor(GuiGetStyle(DEFAULT, BORDER_COLOR_FOCUSED)), backColor);
+                    GuiDrawText(label, rect, TEXT_ALIGN_LEFT, textColor);
+                }
+
+                scrollTop += rowHeight + 2;
+            }
+            EndScissorMode();
+
             if (lock) GuiUnlock();
         }
     }
@@ -589,7 +867,8 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                     // to those directly if you need to store them long-term, copy the result into a persistant buffer.
                     TraceLog(LOG_INFO, TextFormat("Selected file: %s" PATH_SEPERATOR "%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
                     
-                    // TODO(student): Load the model and add it to the scene
+                    const char *modelPath = TextFormat("%s" PATH_SEPERATOR "%s", fileDialogState.dirPathText, fileDialogState.fileNameText);
+        			AddModel(scene, LoadModelFromObjFile(modelPath));
                 } break;
             }
             fileDialogState.SelectFilePressed = false;

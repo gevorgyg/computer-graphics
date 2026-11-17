@@ -38,10 +38,6 @@ int main()
     
     // Our main structures are Scene, RenderSettings and Renderer, initialized here.
     Scene scene = {};
-    { // TODO(student): Move this to the UI
-        const char *modelPath = TextFormat("%s" PATH_SEPERATOR "models" PATH_SEPERATOR "monkey.obj", GetApplicationDirectory());
-        AddModel(&scene, LoadModelFromObjFile(modelPath));
-    }
     
     RenderSettings renderSettings = {};
     renderSettings.tint = (Vec4){.42f, .20f, .47f, 1.f};
