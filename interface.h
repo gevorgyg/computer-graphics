@@ -186,6 +186,8 @@ static void Tooltip(const char *label, int x, int y) {
 //
 void CreateInterface(RenderSettings *settings, Scene *scene) {
     static bool showInterface = true;
+    static bool controlModel = false; // false = camera, true = model
+    static bool cameraSpace = true; // false = world space, true = camera space
     
     // File dialog should lock all other UI elements if it's active, so we need to initialize it first
     static GuiWindowFileDialogState fileDialogState = {};
@@ -227,7 +229,100 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
     // See raygui.h, specifically GuiIconName enum to see what icons are available
     const char *label = GuiIconText(showInterface ? ICON_EYE_ON : ICON_EYE_OFF, NULL);
     GuiToggle((Rectangle) {0, 0, 20, 20}, label, &showInterface);
-    
+
+	{
+        bool uiPanelOpen = fileDialogState.windowActive || colorPickerValue != NULL || activeBoxId != -1;
+    	Rectangle panelBounds = (Rectangle) { 12, 12, 400, settings->height - 24 };
+    	bool mouseOverUI = showInterface && CheckCollisionPointRec(GetMousePosition(), panelBounds);
+
+        bool hasModel  = (0 <= scene->activeModelIndex  && scene->activeModelIndex  < arrlen(scene->models));
+    	bool hasCamera = (0 <= scene->activeCameraIndex && scene->activeCameraIndex < arrlen(scene->cameras));
+
+        if(!uiPanelOpen && hasCamera) {
+            Camera *cam = &scene->cameras[scene->activeCameraIndex];
+        	float dt = GetFrameTime();
+
+            Vec3 right = {1.f, 0.f, 0.f};
+        	Vec3 up = {0.f, 1.f, 0.f};
+        	Vec3 forward = {0.f, 0.f, -1.f};
+
+        	if(cameraSpace) {
+            	forward = V3Normalize(V3Sub(cam->target, cam->position));
+            	right = V3Normalize(V3Cross(forward, cam->up));
+            	up = V3Cross(right, forward);
+        	}
+
+            // Translation controls: W-S for Z, D-A for X, E-Q for Y
+            Vec3 moveDir = {0.f, 0.f, 0.f};
+        	if(IsKeyDown(KEY_W)) moveDir = V3Add(moveDir, forward);
+        	if(IsKeyDown(KEY_S)) moveDir = V3Sub(moveDir, forward);
+        	if(IsKeyDown(KEY_D)) moveDir = V3Add(moveDir, right);
+        	if(IsKeyDown(KEY_A)) moveDir = V3Sub(moveDir, right);
+        	if(IsKeyDown(KEY_E)) moveDir = V3Add(moveDir, up);
+        	if(IsKeyDown(KEY_Q)) moveDir = V3Sub(moveDir, up);
+
+            if(V3Length(moveDir) > EPSILON) {
+            	float speed = scene->step * 5.f * dt;
+            	if(IsKeyDown(KEY_LEFT_SHIFT)) speed *= 2.5f;
+            	Vec3 deltaPos = V3MulS(V3Normalize(moveDir), speed);
+
+            	if(controlModel && hasModel) {
+                	Model *model = &scene->models[scene->activeModelIndex];
+                	model->position = V3Add(model->position, deltaPos);
+            	} else if(!controlModel) {
+                	cam->position = V3Add(cam->position, deltaPos);
+                	cam->target = V3Add(cam->target, deltaPos);
+            	}
+        	}
+
+            // Rotation controls: right mouse for X and Y, Z-C for Z
+            float xDeltaDeg = 0.f;
+        	float yDeltaDeg = 0.f;
+        	float zDeltaDeg = 0.f;
+
+			if(!mouseOverUI && IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+            	Vector2 mouseDelta = GetMouseDelta();
+            	float sensitivity = 0.25f;
+            	yDeltaDeg = -mouseDelta.x * sensitivity;
+            	xDeltaDeg = -mouseDelta.y * sensitivity;
+        	}
+            if(IsKeyDown(KEY_Z)) zDeltaDeg += 60.f * dt;
+        	if(IsKeyDown(KEY_C)) zDeltaDeg -= 60.f * dt;
+
+            if(fabsf(yDeltaDeg) > EPSILON || fabsf(xDeltaDeg) > EPSILON || fabsf(zDeltaDeg) > EPSILON) {
+            	if(controlModel && hasModel) {
+                	Model *model = &scene->models[scene->activeModelIndex];
+                	if (!cameraSpace) {
+                    	model->rotation.x += xDeltaDeg;
+                    	model->rotation.y += yDeltaDeg;
+                    	model->rotation.z += zDeltaDeg;
+                	} else {
+                    	Mat3 R_cur = ModelRotMat(model->rotation);
+                    	Mat3 R_y = M3Rotate(yDeltaDeg * DEG2RAD, up);
+                    	Mat3 R_x = M3Rotate(xDeltaDeg * DEG2RAD, right);
+                    	Mat3 R_z = M3Rotate(zDeltaDeg * DEG2RAD, forward);
+                    	Mat3 R_new = M3MulM3(R_z, M3MulM3(R_x, M3MulM3(R_y, R_cur)));
+                    	model->rotation = ModelDegFromMat(R_new);
+                	}
+            	} else if(!controlModel) {
+                	if(!cameraSpace) {
+                    	cam->orientation.x += xDeltaDeg;
+                    	cam->orientation.y += yDeltaDeg;
+                    	cam->orientation.z += zDeltaDeg;
+                	} else {
+                    	Mat3 R_cur = CameraRotMat(cam->orientation);
+                    	Mat3 R_y = M3Rotate(yDeltaDeg * DEG2RAD, up);
+                    	Mat3 R_x = M3Rotate(xDeltaDeg * DEG2RAD, right);
+                    	Mat3 R_z = M3Rotate(zDeltaDeg * DEG2RAD, forward);
+                    	Mat3 R_new = M3MulM3(R_z, M3MulM3(R_x, M3MulM3(R_y, R_cur)));
+                    	cam->orientation = CameraDegFromMat(R_new);
+                	}
+                	SyncCameraFromOrientation(cam);
+            	}
+            }
+        }
+	}
+
     if (!showInterface) return;
     
     const char *tooltip = NULL;
@@ -314,8 +409,8 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
             GuiToggle(rect, GuiIconText(ICON_LAYERS2, NULL), &settings->showDebugLayer);
         }
         {
-            Rectangle rect = (Rectangle) { right - 2*margin, scrollTop, 2*margin, 2*margin };
-            right -= rect.width + 2;
+            Rectangle rect = (Rectangle) { left, uiTop, iconButtonSize, iconButtonSize };
+            left += iconButtonSize + 2;
 
             if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
                 tooltip = settings->showBoundingBox ? "Hide bounding boxes" : "Show bounding boxes";
@@ -324,8 +419,8 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
             GuiToggle(rect, "BB", &settings->showBoundingBox);
         }
         {
-            Rectangle rect = (Rectangle) { right - 2*margin, scrollTop, 2*margin, 2*margin };
-            right -= rect.width + 2;
+            Rectangle rect = (Rectangle) { left, uiTop, iconButtonSize, iconButtonSize };
+            left += iconButtonSize + 2;
 
             if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
                 tooltip = settings->showFaceNormals ? "Hide face normals" : "Show face normals";
@@ -333,6 +428,16 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
 
             GuiToggle(rect, "N", &settings->showFaceNormals);
         }
+        {
+    		Rectangle rect = (Rectangle) { left, uiTop, iconButtonSize, iconButtonSize };
+    		left += iconButtonSize + 2;
+
+    		if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+        		tooltip = settings->showVertexNormals ? "Hide vertex normals" : "Show vertex normals";
+    		}
+
+    		GuiToggle(rect, "VN", &settings->showVertexNormals);
+		}
         
         BOX_FLOAT(&scene->step, &left, uiTop + 4, "Set the step size when moving with WASD");
         BOX_INT(&settings->problemX, &left, uiTop + 4, "Problem Pixel X");
@@ -372,12 +477,21 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                 right -= iconButtonSize + 2;
                 
                 if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
-                    tooltip = "Control active model with keyboard";
+                    tooltip = "Control active model with keyboard/mouse";
                 }
-                
-                bool value;
-                GuiToggle(rect, GuiIconText(ICON_PLAYER, NULL), &value);
-                // TODO(student)
+
+                GuiToggle(rect, GuiIconText(ICON_PLAYER, NULL), &controlModel);
+            }
+
+            {
+    			Rectangle rect = (Rectangle) { right - 32, uiTop, 32, iconButtonSize };
+    			right -= rect.width + 2;
+
+    			if(!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+        			tooltip = cameraSpace ? "Space: Camera (click for World)" : "Space: World (click for Camera)";
+    			}
+
+    			GuiToggle(rect, cameraSpace ? "Cam" : "Wld", &cameraSpace);
             }
             
             // Primitives
@@ -530,7 +644,12 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                     
                     if (GuiButton(rect, GuiIconText(ICON_BIN, NULL))) {
                         RemoveModel(scene, modelIndex);
-                        if (scene->activeModelIndex >= modelIndex) scene->activeModelIndex -= 1;
+                        if(scene->activeModelIndex > modelIndex) {
+        					scene->activeModelIndex -= 1;
+    					} else if (scene->activeModelIndex == modelIndex) {
+        					scene->activeModelIndex = -1;
+    					}
+                        break;
                     }
                 }
                 
@@ -595,10 +714,24 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                 right -= iconButtonSize + 2;
 
                 if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
-                    tooltip = "Control active camera with keyboard";
+                    tooltip = "Control active camera with keyboard/mouse";
                 }
 
-                // TODO(student)
+                bool controlCamera = !controlModel;
+    			if(GuiToggle(rect, GuiIconText(ICON_PLAYER, NULL), &controlCamera)) {
+        			controlModel = !controlCamera;
+    			}
+            }
+
+            {
+    			Rectangle rect = (Rectangle) { right - 32, uiTop, 32, iconButtonSize };
+    			right -= rect.width + 2;
+
+    			if(!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+        			tooltip = cameraSpace ? "Space: Camera (click for World)" : "Space: World (click for Camera)";
+    			}
+
+    			GuiToggle(rect, cameraSpace ? "Cam" : "Wld", &cameraSpace);
             }
 
             {
@@ -637,7 +770,7 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
 
                     cam->target = model->position;
                     cam->up = (Vec3){0.f,1.f,0.f};
-                    SyncOrientationFromCamera();
+                    SyncOrientationFromCamera(cam);
                 }
 
                 if(tempLock) GuiUnlock();
@@ -807,7 +940,11 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
 
                     if (GuiButton(rect, GuiIconText(ICON_BIN, NULL)) && cameraCount > 1) {
                         RemoveCamera(scene, cameraIndex);
-                        if (scene->activeCameraIndex >= cameraIndex) scene->activeCameraIndex -= 1;
+                        if(scene->activeCameraIndex > cameraIndex) {
+        					scene->activeCameraIndex -= 1;
+    					} else if(scene->activeCameraIndex == cameraIndex) {
+        					scene->activeCameraIndex = MIN(cameraIndex, (int)arrlen(scene->cameras) - 1);
+    					}
                         break;
                     }
                 }
@@ -818,11 +955,7 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                     bool hovered = false;
                     if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
                         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                            if (scene->activeCameraIndex != cameraIndex) {
-                                scene->activeCameraIndex = cameraIndex;
-                            } else {
-                                scene->activeCameraIndex = -1;
-                            }
+                            scene->activeCameraIndex = cameraIndex;
                         }
 
                         hovered = true;

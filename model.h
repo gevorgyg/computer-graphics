@@ -39,6 +39,8 @@ void AddTriangle(Model *model, int a, int b, int c);
 Model LoadModelFromObjFile(const char *filename);
 void FreeModel(Model *model);
 Mat4 GetModelMatrix(const Model *model);
+Mat3 ModelRotMat(Vec3 deg);
+Vec3 ModelDegFromMat(Mat3 R);
 
 #endif // MODEL_HEADER
 
@@ -281,6 +283,27 @@ void FreeModel(Model *model) {
   arrfree(model->textures);
   arrfree(model->normals);
   arrfree(model->triangles);
+}
+
+Mat3 ModelRotMat(Vec3 deg) {
+    Mat3 Rx = M3Rotate(deg.x * DEG2RAD, (Vec3){1.f, 0.f, 0.f});
+    Mat3 Ry = M3Rotate(deg.y * DEG2RAD, (Vec3){0.f, 1.f, 0.f});
+    Mat3 Rz = M3Rotate(deg.z * DEG2RAD, (Vec3){0.f, 0.f, 1.f});
+    return M3MulM3(Rz, M3MulM3(Ry, Rx));
+}
+
+Vec3 ModelDegFromMat(Mat3 R) {
+    float sy = CLAMP(-R.s20, -1.f, 1.f);
+    float y  = asinf(sy);
+    float x, z;
+    if(fabsf(sy) < 0.9999f) {
+        x = atan2(R.s21, R.s22);
+        z = atan2(R.s10, R.s00);
+    } else {
+        x = atan2(sy * R.s01, R.s11);
+        z = 0.f;
+    }
+    return (Vec3){x * RAD2DEG, y * RAD2DEG, z * RAD2DEG};
 }
 
 #endif // MODEL_IMPLEMENTED

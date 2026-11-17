@@ -39,10 +39,14 @@ typedef struct Scene {
 Camera DefaultCamera();
 void AddModel(Scene *scene, Model model);
 void RemoveModel(Scene *scene, int modelIndex);
+void AddCamera(Scene *scene, Camera cam);
+void RemoveCamera(Scene* scene, int camIndex);
 Mat4 GetView(const Camera* cam);
 Mat4 GetProjection(const Camera* cam);
 void SyncCameraFromOrientation(Camera* cam);
 void SyncOrientationFromCamera(Camera* cam);
+Mat3 CameraRotMat(Vec3 deg);
+Vec3 CameraDegFromMat(Mat3 R);
 
 #endif // SCENE_HEADER
 
@@ -74,7 +78,7 @@ Camera DefaultCamera() {
         .up = {0.f,1.f,0.f},
         .projection = PROJ_PERSPECTIVE,
         .fov = 60.f * DEG2RAD,
-        .aspect = (float)settings->width/(float)settings->height,
+        .aspect = 1.f,
         .zNear = 0.1f,
         .zFar = 100.f,
         .orthoSize = 4.f
@@ -98,13 +102,10 @@ void RemoveCamera(Scene* scene, int camIndex) {
 }
 
 void SyncCameraFromOrientation(Camera* cam) {
-	Mat3 Rx = M3Rotate(cam->orientation.x * DEG2RAD, (Vec3){1.f,0.f,0.f});
-    Mat3 Ry = M3Rotate(cam->orientation.y * DEG2RAD, (Vec3){0.f,1.f,0.f});
-    Mat3 Rz = M3Rotate(cam->orientation.z * DEG2RAD, (Vec3){0.f,0.f,1.f});
-    Mat3 R = M3MulM3(Ry, M3MULM3(Rx, Rz));
+	Mat3 R = CameraRotMat(cam->orientation);
 
-    Vec3 forward = M3MulM3(R, (Vec3){0.f,0.f,-1.f};
-	cam->up = M3MulM3(R, (Vec3){0.f, 1.f, 0.f};
+    Vec3 forward = M3MulV3(R, (Vec3){0.f,0.f,-1.f});
+	cam->up = M3MulV3(R, (Vec3){0.f, 1.f, 0.f});
     cam->target = V3Add(cam->position, forward);
 }
 
@@ -113,6 +114,27 @@ void SyncOrientationFromCamera(Camera* cam) {
     cam->orientation.x = asin(CLAMP(dir.y, -1.f, 1.f)) * RAD2DEG;
     cam->orientation.y = atan2(-dir.x, -dir.z) * RAD2DEG;
     cam->orientation.z = 0.f;
+}
+
+Mat3 CameraRotMat(Vec3 deg) {
+    Mat3 Rx = M3Rotate(deg.x * DEG2RAD, (Vec3){1.f, 0.f, 0.f});
+    Mat3 Ry = M3Rotate(deg.y * DEG2RAD, (Vec3){0.f, 1.f, 0.f});
+    Mat3 Rz = M3Rotate(deg.z * DEG2RAD, (Vec3){0.f, 0.f, 1.f});
+    return M3MulM3(Ry, M3MulM3(Rx, Rz));
+}
+
+Vec3 CameraDegFromMat(Mat3 R) {
+    float sx = CLAMP(-R.s12, -1.f, 1.f);
+    float x  = asinf(sx);
+    float y, z;
+    if(fabsf(sx) < 0.9999f) {
+        y = atan2(R.s02, R.s22);
+        z = atan2(R.s10, R.s11);
+    } else {
+        y = atan2(-R.s20, R.s00);
+        z = 0.f;
+    }
+    return (Vec3){x * RAD2DEG, y * RAD2DEG, z * RAD2DEG};
 }
 
 #endif // SCENE_IMPLEMENTED

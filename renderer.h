@@ -23,8 +23,6 @@ typedef struct RenderSettings {
     bool showVertexNormals;
     Vec4 tint;
     int problemX, problemY;
-    bool showBoundingBox;
-    bool showFaceNormals;
     
     RenderingMethod renderingMethod;
 } RenderSettings;
@@ -261,7 +259,7 @@ void RenderScene(Scene *scene, Renderer *renderer, double time) {
                         
                 }
             }
-        } else if (arrlen(model.normals) <= 0) {
+        } else if(settings->showVertexNormals && arrlen(model.normals) <= 0) {
             TraceLog(LOG_ERROR, "showVertexNormals can't be enabled: modelIndex == %d has %d vertex normals",
                      modelIndex, arrlen(model.normals));
         }
