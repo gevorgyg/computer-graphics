@@ -35,7 +35,7 @@ typedef struct Model {
 
 // only declare new models through this function!!!
 Model NewModel();
-
+void AddTriangle(Model *model, int a, int b, int c);
 Model LoadModelFromObjFile(const char *filename);
 void FreeModel(Model *model);
 Mat4 GetModelMatrix(const Model *model);
@@ -181,13 +181,22 @@ static Triangle ParseNextTriangle(const char *str, int *start, int len) {
     t = ParseNextTriplet(str, &i, len);
     tri.vertices[k] = t.x;
     tri.textures[k] = t.y;
-    tri.textures[k] = t.z;
+    tri.normals[k] = t.z;
   }
   *start = i;
   return tri;
 }
 
 // Helper functions end
+
+
+void AddTriangle( Model *m, int a, int b, int c) {
+    Vec3 e1 = V3Sub(m->vertices[b-1], m->vertices[a-1]);
+    Vec3 e2 = V3Sub(m->vertices[c-1], m->vertices[a-1]);
+    arrput(m->normals, V3Normalize(V3Cross(e1, e2)));
+    int n = (int)arrlen(m->normals);
+    arrput(m->triangles, ((Triangle){ .vertices = {a, b, c}, .normals = {n, n, n} }));
+}
 
 Model NewModel(void) {
     Model m = {};

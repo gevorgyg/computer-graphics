@@ -57,6 +57,8 @@ int main()
     
     RenderSettings renderSettings = {};
     renderSettings.tint = (Vec4){.42f, .20f, .47f, 1.f};
+    renderSettings.showBoundingBox = true;
+    renderSettings.showFaceNormals = true;
     renderSettings.problemX = 300;
     renderSettings.problemY = 300;
     renderSettings.showDebugLayer = true;

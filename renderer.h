@@ -18,6 +18,8 @@ typedef struct RenderSettings {
     int width, height;
     
     bool showDebugLayer;
+    bool showBoundingBox;
+    bool showFaceNormals;
     Vec4 tint;
     int problemX, problemY;
     
@@ -41,26 +43,28 @@ void RenderScene(Scene *scene, Renderer *renderer, double time);
 
 #include "stb_ds.h" // For dynamic arrays
 
-static void PlotPixel(Renderer *r, int x, int y) {
+static void PlotPixel(Renderer *r, int x, int y, Vec4 color) {
     RenderSettings *s = r->settings;
-    if (x < 0 || x >= s->width || y < 0 || y >= s->height) return;
-    r->pixels[y*s->width + x] = (Vec4){1.f, 1.f, 1.f, 1.f};
+    if (x < 0 || x >= s->width || y < 0 || y >= s->height) {
+        return;
+    }
+    r->pixels[y*s->width + x] = color;
 }
 
-static void DrawLineBasic(Renderer *r, int x0, int y0, int x1, int y1) {
+static void DrawLineBasic(Renderer *r, int x0, int y0, int x1, int y1, Vec4 color) {
     int dx = x1 - x0, dy = y1 - y0;
     int steps = MAX(ABS(dx), ABS(dy));
     if (steps == 0) {
-        PlotPixel(r, x0, y0); return;
+        PlotPixel(r, x0, y0, color); return;
     }
 
     for (int i = 0; i <= steps; ++i) {
         float t = (float)i / (float)steps;
-        PlotPixel(r, (int)(x0 + t*dx), (int)(y0 + t*dy));
+        PlotPixel(r, (int)(x0 + t*dx), (int)(y0 + t*dy), color);
     }
 }
 
-static void DrawLineBresenham(Renderer *r, int x0, int y0, int x1, int y1) {
+static void DrawLineBresenham(Renderer *r, int x0, int y0, int x1, int y1, Vec4 color) {
     int t;
     bool steep = ABS(y1 - y0) > ABS(x1 - x0);
     if (steep) { // when 0 < slope < 1
@@ -89,10 +93,10 @@ static void DrawLineBresenham(Renderer *r, int x0, int y0, int x1, int y1) {
     int y = y0;
     for (int x = x0; x <= x1; ++x) {
         if (steep) {
-            PlotPixel(r, y, x);
+            PlotPixel(r, y, x, color);
         }
-        else {   
-            PlotPixel(r, x, y);
+        else {
+            PlotPixel(r, x, y, color);
         }
 
         if (d < 0) {
@@ -163,13 +167,78 @@ void RenderScene(Scene *scene, Renderer *renderer, double time) {
                 if (!ok[i] || !ok[j]) {
                     continue;
                 }
-                DrawLineBresenham(renderer, px[i], py[i], px[j], py[j]);
+                DrawLineBresenham(renderer, px[i], py[i], px[j], py[j], (Vec4){1.f, 1.f, 1.f, 1.f});
             }
         }
 
         arrfree(px);
         arrfree(py);
         arrfree(ok);
+
+        if (settings->showFaceNormals) {
+            for (int t = 0; t < arrlen(model.triangles); ++t) {
+                Triangle tri = model.triangles[t];
+                Vec3 a = model.vertices[tri.vertices[0] - 1];
+                Vec3 b = model.vertices[tri.vertices[1] - 1];
+                Vec3 c = model.vertices[tri.vertices[2] - 1];
+                Vec3 n = V3Normalize(V3Cross(V3Sub(b, a), V3Sub(c, a)));
+
+                Vec3 ends[2];
+                ends[0] = V3DivS(V3Add(V3Add(a, b), c), 3.f);
+                ends[1] = V3Add(ends[0], V3MulS(n, 0.2f));
+
+                int sx[2], sy[2];
+                bool visible = true;
+                for (int e = 0; e < 2; ++e) {
+                    Vec4 q = M4MulV4(fromModelToScreen, (Vec4){ends[e].x, ends[e].y, ends[e].z, 1.f});
+                    if (q.w <= EPSILON || q.z < -q.w) { visible = false; break; }
+                    sx[e] = (int)((q.x / q.w + 1.f) / 2.f * (settings->width  - 1));
+                    sy[e] = (int)((q.y / q.w + 1.f) / 2.f * (settings->height - 1));
+                }
+                if (visible) DrawLineBresenham(renderer, sx[0], sy[0], sx[1], sy[1], (Vec4){0.f, 1.f, 0.f, 1.f});
+            }
+        }
+
+        if (settings->showBoundingBox && model.vertexCount > 0) {
+            Vec3 lo = model.vertices[0], hi = model.vertices[0];
+            for (int i = 1; i < model.vertexCount; i++) {
+                Vec3 v = model.vertices[i];
+                lo.x = MIN(lo.x, v.x); lo.y = MIN(lo.y, v.y); lo.z = MIN(lo.z, v.z);
+                hi.x = MAX(hi.x, v.x); hi.y = MAX(hi.y, v.y); hi.z = MAX(hi.z, v.z);
+            }
+
+            Vec3 box[2] = {lo, hi};
+            int bx[8], by[8];
+            bool bok[8];
+            for (int i = 0; i < 2; i++) {
+                for (int j = 0; j < 2; j++) {
+                    for (int k = 0; k < 2; k++) {
+                        int c = 4*i + 2*j + k;
+                        Vec4 q = M4MulV4(fromModelToScreen, (Vec4){box[i].x, box[j].y, box[k].z, 1.f});
+                        bok[c] = q.w > EPSILON && q.z >= -q.w;
+                        bx[c] = (int)((q.x / q.w + 1.f) / 2.f * (settings->width  - 1));
+                        by[c] = (int)((q.y / q.w + 1.f) / 2.f * (settings->height - 1));
+                    }
+                }
+            }
+
+            int edges[12][2] = {
+                {0,1},{2,3},{4,5},{6,7},
+                {0,2},{1,3},{4,6},{5,7},
+                {0,4},{1,5},{2,6},{3,7}
+            };
+            for (int e = 0; e < 12; e++) {
+                int a = edges[e][0], b = edges[e][1];
+                if (bok[a] && bok[b]) {
+                    DrawLineBresenham(renderer, bx[a], by[a], bx[b], by[b], (Vec4){1.f, 0.f, 1.f, 1.f});
+                }
+            }
+        } else if (model.vertexCount <= 0) {
+            TraceLog(LOG_ERROR, "Model modelIndex==%d has no vertices!! model.vertexCount==%d",
+                     modelIndex, model.vertexCount);
+        }
+
+
     }
 }
 

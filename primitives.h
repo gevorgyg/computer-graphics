@@ -19,23 +19,13 @@ Model MakeCube() {
     }
   }
 
-  Triangle cover[12] = {
-    // -x
-    { .vertices = {1, 2, 4} }, { .vertices = {1, 4, 3} },
-    // +x
-    { .vertices = {5, 7, 8} }, { .vertices = {5, 8, 6} },
-    // -y
-    { .vertices = {1, 5, 6} }, { .vertices = {1, 6, 2} },
-    // +y
-    { .vertices = {3, 4, 8} }, { .vertices = {3, 8, 7} },
-    // -z
-    { .vertices = {1, 3, 7} }, { .vertices = {1, 7, 5} },
-    // +z
-    { .vertices = {2, 6, 8} }, { .vertices = {2, 8, 4} },
-  };
+  AddTriangle(&cube, 1, 2, 4); AddTriangle(&cube, 1, 4, 3);
+  AddTriangle(&cube, 5, 7, 8); AddTriangle(&cube, 5, 8, 6);
+  AddTriangle(&cube, 1, 5, 6); AddTriangle(&cube, 1, 6, 2);
+  AddTriangle(&cube, 3, 4, 8); AddTriangle(&cube, 3, 8, 7);
+  AddTriangle(&cube, 1, 3, 7); AddTriangle(&cube, 1, 7, 5);
+  AddTriangle(&cube, 2, 6, 8); AddTriangle(&cube, 2, 8, 4);
 
-  arrsetlen(cube.triangles, 12);
-  memcpy(cube.triangles, cover, sizeof(cover));
   cube.vertexCount = (int)arrlen(cube.vertices);
 
   return cube;
