@@ -379,7 +379,7 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
         uiTop += 2*margin + margin;
         
         { // Transform controls for the active model
-            Model dummyModel = {};
+            Model dummyModel = NewModel();
             Model *activeModel = NULL;
             static bool lock = false;
             

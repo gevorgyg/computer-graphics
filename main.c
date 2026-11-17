@@ -42,6 +42,18 @@ int main()
         const char *modelPath = TextFormat("%s" PATH_SEPERATOR "models" PATH_SEPERATOR "monkey.obj", GetApplicationDirectory());
         AddModel(&scene, LoadModelFromObjFile(modelPath));
     }
+    { // Default camera, so there is something to render from
+        Camera camera = {};
+        camera.position   = (Vec3){0.f, 0.f, 5.f};
+        camera.target     = (Vec3){0.f, 0.f, 0.f};
+        camera.up         = (Vec3){0.f, 1.f, 0.f};
+        camera.projection = PROJ_PERSPECTIVE;
+        camera.fov        = 60.f * PI / 180.f;
+        camera.zNear      = 0.1f;
+        camera.zFar       = 100.f;
+        camera.orthoSize  = 4.f;
+        arrput(scene.cameras, camera);
+    }
     
     RenderSettings renderSettings = {};
     renderSettings.tint = (Vec4){.42f, .20f, .47f, 1.f};

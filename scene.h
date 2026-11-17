@@ -37,8 +37,8 @@ typedef struct Scene {
 
 void AddModel(Scene *scene, Model model);
 void RemoveModel(Scene *scene, int modelIndex);
-Mat4 GetView(Camera* cam);
-Mat4 GetProjection(Camera* cam);
+Mat4 GetView(const Camera* cam);
+Mat4 GetProjection(const Camera* cam);
 
 #endif // SCENE_HEADER
 
@@ -49,11 +49,11 @@ Mat4 GetProjection(Camera* cam);
 
 #include "stb_ds.h" // For dynamic arrays
 
-Mat4 GetView(Camera* cam) {
+Mat4 GetView(const Camera* cam) {
     return M4LookAt(cam->position, cam->target, cam->up);
 }
 
-Mat4 GetProjection(Camera* cam) {
+Mat4 GetProjection(const Camera* cam) {
     if(cam->projection == PROJ_ORTHOGRAPHIC) {
         float halfH = cam->orthoSize * 0.5f;
         float halfW = halfH * cam->aspect;
@@ -69,6 +69,8 @@ void AddModel(Scene *scene, Model model) {
 void RemoveModel(Scene *scene, int modelIndex) {
     arrdel(scene->models, modelIndex);
 }
+
+
 
 #endif // SCENE_IMPLEMENTED
 #endif // SCENE_IMPLEMENTATION

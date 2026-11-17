@@ -5,7 +5,7 @@
 
 // cube with edge of len 1
 Model MakeCube() {
-  Model cube = {};
+    Model cube = NewModel();
   float coords[2] = {-0.5, 0.5};
   Vec3 t;
   for (int i = 0; i < 2; i++) {
@@ -36,13 +36,14 @@ Model MakeCube() {
 
   arrsetlen(cube.triangles, 12);
   memcpy(cube.triangles, cover, sizeof(cover));
+  cube.vertexCount = (int)arrlen(cube.vertices);
 
   return cube;
 }
 
 // TODO
 Model MakeSphere() {
-    Model sphere = {};
+    Model sphere = NewModel();
     return sphere;
 }
 

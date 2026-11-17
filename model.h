@@ -20,8 +20,11 @@ typedef struct Model {
   
   // Model transformation data
   Vec3 position;
+  // rotations with respect to: x, y, z
+  Vec3 rotation;
+  Vec3 scale;
   bool hidden;
-  // TODO(student) ...
+
     
   // GPU handles (HW3)
   unsigned int gpuVertexBufferId;
@@ -30,8 +33,12 @@ typedef struct Model {
   unsigned int gpuVertexArrayId;
 } Model;
 
+// only declare new models through this function!!!
+Model NewModel();
+
 Model LoadModelFromObjFile(const char *filename);
 void FreeModel(Model *model);
+Mat4 GetModelMatrix(const Model *model);
 
 #endif // MODEL_HEADER
 
@@ -182,9 +189,28 @@ static Triangle ParseNextTriangle(const char *str, int *start, int len) {
 
 // Helper functions end
 
+Model NewModel(void) {
+    Model m = {};
+    m.scale = (Vec3){1.f, 1.f, 1.f};
+    return m;
+}
+
+
+// model->rotation holds angles in degrees about x, y, z
+Mat4 GetModelMatrix(const Model *model) {
+    float toRadians = PI / 180.f;
+    Mat4 Rx = M4Rotate(model->rotation.x * toRadians, (Vec3){1.f, 0.f, 0.f});
+    Mat4 Ry = M4Rotate(model->rotation.y * toRadians, (Vec3){0.f, 1.f, 0.f});
+    Mat4 Rz = M4Rotate(model->rotation.z * toRadians, (Vec3){0.f, 0.f, 1.f});
+    Mat4 R = M4MulM4(Rz, M4MulM4(Ry, Rx));
+    Mat4 T = M4Translate(model->position);
+    Mat4 S = M4ScaleV3(model->scale);
+
+    return M4MulM4(T, M4MulM4(R, S));
+}
 
 Model LoadModelFromObjFile(const char *filename) {
-  Model model = {};
+    Model model = NewModel();
     
   int dataSize = -1;
   const char *data = (char *)LoadFileData(filename, &dataSize);
@@ -234,7 +260,8 @@ Model LoadModelFromObjFile(const char *filename) {
         
     lineIndex += 1;
   }
-  model.vertexCount += arrlen(model.vertices);
+  model.vertexCount = (int)arrlen(model.vertices);
+
   UnloadFileData((unsigned char*)data);
     
   return model;
