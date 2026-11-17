@@ -107,5 +107,7 @@ void SyncCameraWithOrientation(Camera* cam) {
     cam->target = V3Add(cam->position, forward);
 }
 
+
+
 #endif // SCENE_IMPLEMENTED
 #endif // SCENE_IMPLEMENTATION

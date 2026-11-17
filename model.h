@@ -20,10 +20,12 @@ typedef struct Model {
   
   // Model transformation data
   Vec3 position;
+  // rotations with respect to: x, y, z
   Vec3 rotation;
   Vec3 scale;
   bool hidden;
-    
+
+
   // GPU handles (HW3)
   unsigned int gpuVertexBufferId;
   unsigned int gpuNormalBufferId;
@@ -31,8 +33,12 @@ typedef struct Model {
   unsigned int gpuVertexArrayId;
 } Model;
 
+// only declare new models through this function!!!
+Model NewModel();
+void AddTriangle(Model *model, int a, int b, int c);
 Model LoadModelFromObjFile(const char *filename);
 void FreeModel(Model *model);
+Mat4 GetModelMatrix(const Model *model);
 
 #endif // MODEL_HEADER
 
@@ -175,7 +181,7 @@ static Triangle ParseNextTriangle(const char *str, int *start, int len) {
     t = ParseNextTriplet(str, &i, len);
     tri.vertices[k] = t.x;
     tri.textures[k] = t.y;
-    tri.textures[k] = t.z;
+    tri.normals[k] = t.z;
   }
   *start = i;
   return tri;
@@ -184,8 +190,36 @@ static Triangle ParseNextTriangle(const char *str, int *start, int len) {
 // Helper functions end
 
 
+void AddTriangle( Model *m, int a, int b, int c) {
+    Vec3 e1 = V3Sub(m->vertices[b-1], m->vertices[a-1]);
+    Vec3 e2 = V3Sub(m->vertices[c-1], m->vertices[a-1]);
+    arrput(m->normals, V3Normalize(V3Cross(e1, e2)));
+    int n = (int)arrlen(m->normals);
+    arrput(m->triangles, ((Triangle){ .vertices = {a, b, c}, .normals = {n, n, n} }));
+}
+
+Model NewModel(void) {
+    Model m = {};
+    m.scale = (Vec3){1.f, 1.f, 1.f};
+    return m;
+}
+
+
+// model->rotation holds angles in degrees about x, y, z
+Mat4 GetModelMatrix(const Model *model) {
+    float toRadians = PI / 180.f;
+    Mat4 Rx = M4Rotate(model->rotation.x * toRadians, (Vec3){1.f, 0.f, 0.f});
+    Mat4 Ry = M4Rotate(model->rotation.y * toRadians, (Vec3){0.f, 1.f, 0.f});
+    Mat4 Rz = M4Rotate(model->rotation.z * toRadians, (Vec3){0.f, 0.f, 1.f});
+    Mat4 R = M4MulM4(Rz, M4MulM4(Ry, Rx));
+    Mat4 T = M4Translate(model->position);
+    Mat4 S = M4ScaleV3(model->scale);
+
+    return M4MulM4(T, M4MulM4(R, S));
+}
+
 Model LoadModelFromObjFile(const char *filename) {
-  Model model = {};
+    Model model = NewModel();
     
   int dataSize = -1;
   const char *data = (char *)LoadFileData(filename, &dataSize);
@@ -235,7 +269,8 @@ Model LoadModelFromObjFile(const char *filename) {
         
     lineIndex += 1;
   }
-  model.vertexCount += arrlen(model.vertices);
+  model.vertexCount = (int)arrlen(model.vertices);
+
   UnloadFileData((unsigned char*)data);
     
   return model;

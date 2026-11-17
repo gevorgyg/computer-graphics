@@ -38,9 +38,30 @@ int main()
     
     // Our main structures are Scene, RenderSettings and Renderer, initialized here.
     Scene scene = {};
+    {
+        const char *modelPath = TextFormat("%s" PATH_SEPERATOR "models" PATH_SEPERATOR "monkey.obj", GetApplicationDirectory());
+        AddModel(&scene, LoadModelFromObjFile(modelPath));
+    	Model cube = MakeCube();
+    	cube.position = (Vec3){2.5f, 0.f, 0.f};
+    	AddModel(&scene, cube);
+
+    	Model sphere = MakeSphere();
+    	sphere.position = (Vec3){-2.5f, 0.f, 0.f};
+    	AddModel(&scene, sphere);
+    }
+    { // default camera
+        Camera camera = DefaultCamera();
+        AddCamera(&scene, camera);
+        Camera second = camera;
+        second.position = (Vec3){3.f, 0.f, -2.f};
+        AddCamera(&scene, second);
+    }
     
     RenderSettings renderSettings = {};
     renderSettings.tint = (Vec4){.42f, .20f, .47f, 1.f};
+    renderSettings.showBoundingBox = true;
+    renderSettings.showFaceNormals = true;
+    renderSettings.showVertexNormals = true;
     renderSettings.problemX = 300;
     renderSettings.problemY = 300;
     renderSettings.showDebugLayer = true;
