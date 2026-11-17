@@ -54,6 +54,7 @@ int main()
         AddCamera(&scene, camera);
         Camera second = camera;
         second.position = (Vec3){3.f, 0.f, -2.f};
+        SyncOrientationFromCamera(&second);
         AddCamera(&scene, second);
     }
     

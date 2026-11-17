@@ -41,7 +41,8 @@ void AddModel(Scene *scene, Model model);
 void RemoveModel(Scene *scene, int modelIndex);
 Mat4 GetView(const Camera* cam);
 Mat4 GetProjection(const Camera* cam);
-void SyncCameraWithOrientation(Camera* cam);
+void SyncCameraFromOrientation(Camera* cam);
+void SyncOrientationFromCamera(Camera* cam);
 
 #endif // SCENE_HEADER
 
@@ -96,7 +97,7 @@ void RemoveCamera(Scene* scene, int camIndex) {
     arrdel(scene->cameras, camIndex);
 }
 
-void SyncCameraWithOrientation(Camera* cam) {
+void SyncCameraFromOrientation(Camera* cam) {
 	Mat3 Rx = M3Rotate(cam->orientation.x * DEG2RAD, (Vec3){1.f,0.f,0.f});
     Mat3 Ry = M3Rotate(cam->orientation.y * DEG2RAD, (Vec3){0.f,1.f,0.f});
     Mat3 Rz = M3Rotate(cam->orientation.z * DEG2RAD, (Vec3){0.f,0.f,1.f});
@@ -107,7 +108,12 @@ void SyncCameraWithOrientation(Camera* cam) {
     cam->target = V3Add(cam->position, forward);
 }
 
-
+void SyncOrientationFromCamera(Camera* cam) {
+	Vec3 dir = V3Normalize(V3Sub(cam->target, cam->position));
+    cam->orientation.x = asin(CLAMP(dir.y, -1.f, 1.f)) * RAD2DEG;
+    cam->orientation.y = atan2(-dir.x, -dir.z) * RAD2DEG;
+    cam->orientation.z = 0.f;
+}
 
 #endif // SCENE_IMPLEMENTED
 #endif // SCENE_IMPLEMENTATION

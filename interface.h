@@ -393,7 +393,18 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                     AddModel(scene, primitive);
                 }
             }
-            // Other primitives
+            {
+                Rectangle rect = (Rectangle) { left, uiTop, 2*margin, 2*margin };
+                left += rect.width + 2;
+
+                if (!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+                    tooltip = "Add Sphere";
+                }
+                if (GuiButton(rect, GuiIconText(ICON_SPHERE, NULL))) {
+                    Model primitive = MakeSphere();
+                    AddModel(scene, primitive);
+                }
+            }
         }
         uiTop += 2*margin + margin;
         
@@ -602,6 +613,35 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
                     AddCamera(scene, defCam);
                 }
             }
+
+            {
+                bool hasModel  = (0 <= scene->activeModelIndex  && scene->activeModelIndex  < arrlen(scene->models));
+    			bool hasCamera = (0 <= scene->activeCameraIndex && scene->activeCameraIndex < arrlen(scene->cameras));
+				bool tempLock  = (!hasModel || !hasCamera) && !GuiIsLocked();
+    			if(tempLock) GuiLock();
+
+                const char *label = GuiIconText(ICON_EYE_ON, "Focus");
+    			Rectangle rect = (Rectangle) { left, uiTop, margin + GuiGetTextWidth(label), 2*margin };
+    			left += rect.width + 2;
+
+                if(!GuiIsLocked() && CheckCollisionPointRec(GetMousePosition(), rect)) {
+        			tooltip = "Focus active camera on active model";
+    			}
+                if (GuiButton(rect, label) && hasModel && hasCamera) {
+        			Camera *cam   = &scene->cameras[scene->activeCameraIndex];
+        			Model  *model = &scene->models[scene->activeModelIndex];
+
+                    if(V3Length(V3Sub(model->position, cam->position)) < EPSILON) {
+            			cam->position = V3Add(model->position, (Vec3){0.f, 0.f, 5.f});
+        			}
+
+                    cam->target = model->position;
+                    cam->up = (Vec3){0.f,1.f,0.f};
+                    SyncOrientationFromCamera();
+                }
+
+                if(tempLock) GuiUnlock();
+            }
         }
         uiTop += 2*margin + margin;
 
@@ -704,7 +744,7 @@ void CreateInterface(RenderSettings *settings, Scene *scene) {
             uiTop += rowHeight;
 
             if (activeCamera != &dummyCamera) {
-				SyncCameraWithOrientation(activeCamera);
+				SyncCameraFromOrientation(activeCamera);
             } else {
                 Rectangle rect = (Rectangle) {uiLeft - margin, controlTop - margin/2, uiWidth, uiTop - controlTop + margin};
                 int textAlignStyle = GuiGetStyle(DEFAULT, TEXT_ALIGNMENT_VERTICAL);
